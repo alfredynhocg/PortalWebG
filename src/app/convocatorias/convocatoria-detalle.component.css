@@ -1,0 +1,143 @@
+:host {
+  display: block;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: var(--bs-secondary, #4b4b49);
+  background: #fff;
+}
+
+.contenido {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.btn-volver {
+  background: none;
+  border: none;
+  color: var(--bs-dark, #1c120e);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.mensaje-error {
+  color: var(--bs-danger, #bf1b2d);
+}
+
+.mensaje-cargando {
+  color: #666;
+}
+
+.detalle {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 24px;
+}
+
+.detalle__titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detalle__titulo-fila h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.detalle__codigo {
+  font-size: 12px;
+  color: #888;
+  margin: 6px 0 20px;
+}
+
+.badge {
+  font-size: 11px;
+  border: 1px solid var(--bs-primary, #cbab58);
+  color: var(--bs-primary, #cbab58);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.detalle__datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 16px 32px;
+  margin: 0;
+}
+
+.detalle__datos dt {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.detalle__datos dd {
+  font-size: 14px;
+  margin: 0;
+  color: #333;
+}
+
+.badge--cerrada {
+  border-color: var(--bs-danger, #bf1b2d);
+  color: var(--bs-danger, #bf1b2d);
+}
+
+.detalle__seccion {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.detalle__seccion h2 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.detalle__seccion p {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.detalle__seccion ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.detalle__seccion li {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.detalle__tabla-formulario {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.detalle__tabla-formulario th,
+.detalle__tabla-formulario td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.detalle__tabla-formulario th {
+  color: #888;
+  font-weight: 600;
+}
+
+.btn-primario {
+  background: var(--bs-primary, #cbab58);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}

@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: var(--bs-secondary, #4b4b49);
+  background: #fff;
+}
+
+.contenido {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.btn-volver {
+  background: none;
+  border: none;
+  color: var(--bs-dark, #1c120e);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.wizard {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 24px;
+}
+
+.wizard h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+.wizard__paso {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+
+.wizard__seccion {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 14px 20px;
+}
+
+.wizard__seccion legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  padding: 0 6px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo--ancho {
+  grid-column: 1 / -1;
+}
+
+.campo label {
+  font-size: 12px;
+  color: #888;
+}
+
+.campo input,
+.campo select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.wizard__acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-primario {
+  background: var(--bs-primary, #cbab58);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mensaje-error {
+  color: var(--bs-danger, #bf1b2d);
+  font-size: 13px;
+}
+
+.btn-secundario {
+  background: none;
+  border: 1px solid var(--bs-primary, #cbab58);
+  color: var(--bs-primary, #cbab58);
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.mensaje-exito {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.mensaje-exito h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.mensaje-exito__nota {
+  color: #888;
+  font-size: 13px;
+  margin-top: 16px;
+}

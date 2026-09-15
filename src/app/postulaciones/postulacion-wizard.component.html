@@ -1,0 +1,314 @@
+<main class="contenido">
+  <button type="button" class="btn-volver" (click)="volver()">&lt; Volver a la convocatoria</button>
+
+  @if (cargando()) {
+    <p class="mensaje-cargando">Cargando postulación...</p>
+  } @else if (postulacionConfirmada(); as p) {
+    <div class="mensaje-exito">
+      <h1>{{ p.estado === 'ENVIADO' ? 'Ya enviaste esta postulación' : '¡Postulación enviada!' }}</h1>
+      <p>Convocatoria <strong>{{ p.codigo_convocatoria }}</strong> — estado <strong>{{ p.estado }}</strong>.</p>
+      @if (p.codigo_postulacion) {
+        <p>N° de postulación: <strong>{{ p.codigo_postulacion }}</strong></p>
+      }
+      <p class="mensaje-exito__nota">No se puede volver a postular ni modificar los datos de esta convocatoria.</p>
+      <button type="button" class="btn-secundario" (click)="volver()">Volver a la convocatoria</button>
+    </div>
+  } @else if (resumen(); as r) {
+    <article class="wizard">
+      <h1>Formulario de Postulación</h1>
+      <p class="wizard__paso">Paso {{ paso() }} de 6 — {{ codigo }}</p>
+
+      <nav class="wizard__pasos">
+        <button type="button" [class.activo]="paso() === 2" (click)="irAPaso(2)">2. Formación</button>
+        <button type="button" [class.activo]="paso() === 3" (click)="irAPaso(3)">3. Experiencia</button>
+        <button type="button" [class.activo]="paso() === 4" (click)="irAPaso(4)">4. Conocimientos</button>
+        <button type="button" [class.activo]="paso() === 6" (click)="irAPaso(6)">6. Confirmar</button>
+      </nav>
+
+      @if (error()) {
+        <p class="mensaje-error">{{ error() }}</p>
+      }
+
+      @if (paso() === 2) {
+        <section class="wizard__seccion-paso">
+          <h2>Formación Académica</h2>
+
+          @if (r.formaciones.length) {
+            <ul class="lista-bloques">
+              @for (f of r.formaciones; track f.id) {
+                <li>{{ f.nivel_estudios }} — {{ f.institucion }} ({{ f.fecha_inicio }} a {{ f.fecha_fin }})</li>
+              }
+            </ul>
+          }
+
+          <form #formForm="ngForm" (ngSubmit)="agregarFormacion(formForm)" novalidate>
+            <div class="campo">
+              <label for="nivel_estudios">Nivel de Estudios *</label>
+              <select id="nivel_estudios" name="nivel_estudios" required [(ngModel)]="nuevaFormacion.nivel_estudios">
+                <option value="" disabled selected>Seleccionar</option>
+                <option value="BACHILLER">BACHILLER</option>
+                <option value="TECNICO_MEDIO">TÉCNICO MEDIO</option>
+                <option value="TECNICO_SUPERIOR">TÉCNICO SUPERIOR</option>
+                <option value="LICENCIATURA">LICENCIATURA</option>
+                <option value="DIPLOMADO">DIPLOMADO</option>
+                <option value="MAESTRIA">MAESTRÍA</option>
+                <option value="DOCTORADO">DOCTORADO</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="tipo_documento_f">Tipo de documento *</label>
+              <select id="tipo_documento_f" name="tipo_documento" required [(ngModel)]="nuevaFormacion.tipo_documento">
+                <option value="" disabled selected>Seleccionar</option>
+                <option value="TITULO_PROVISION_NACIONAL">TÍTULO EN PROVISIÓN NACIONAL</option>
+                <option value="DIPLOMA_ACADEMICO">DIPLOMA ACADÉMICO</option>
+                <option value="CERTIFICADO">CERTIFICADO</option>
+                <option value="RECORD_ACADEMICO">RÉCORD ACADÉMICO</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="institucion_f">Institución *</label>
+              <input id="institucion_f" name="institucion" type="text" required [(ngModel)]="nuevaFormacion.institucion" />
+            </div>
+
+            <div class="campo">
+              <label for="area_formacion">Área de formación *</label>
+              <input id="area_formacion" name="area_formacion" type="text" required [(ngModel)]="nuevaFormacion.area_formacion" />
+            </div>
+
+            <div class="campo">
+              <label for="fecha_inicio_f">Fecha de inicio *</label>
+              <input id="fecha_inicio_f" name="fecha_inicio" type="date" required [(ngModel)]="nuevaFormacion.fecha_inicio" />
+            </div>
+
+            <div class="campo">
+              <label for="fecha_fin_f">Fecha Fin *</label>
+              <input id="fecha_fin_f" name="fecha_fin" type="date" required [(ngModel)]="nuevaFormacion.fecha_fin" />
+            </div>
+
+            <div class="campo">
+              <label for="nro_titulo">Nro. de título</label>
+              <input id="nro_titulo" name="nro_titulo" type="text" [(ngModel)]="nuevaFormacion.nro_titulo" />
+            </div>
+
+            <div class="campo campo--checkbox">
+              <label>
+                <input type="checkbox" name="relacionado_cargo" [(ngModel)]="nuevaFormacion.relacionado_cargo" />
+                Relacionado al cargo
+              </label>
+            </div>
+
+            <div class="campo">
+              <label for="fecha_emision_f">Fecha de Emisión *</label>
+              <input id="fecha_emision_f" name="fecha_emision" type="date" required [(ngModel)]="nuevaFormacion.fecha_emision" />
+            </div>
+
+            <div class="campo">
+              <label for="nro_registro_profesional">Nro. Registro Profesional</label>
+              <input
+                id="nro_registro_profesional"
+                name="nro_registro_profesional"
+                type="text"
+                [(ngModel)]="nuevaFormacion.nro_registro_profesional"
+              />
+            </div>
+
+            <div class="campo campo--ancho">
+              <label for="documento_url_f">URL del documento adjunto *</label>
+              <input id="documento_url_f" name="documento_url" type="text" required [(ngModel)]="nuevaFormacion.documento_url" />
+            </div>
+
+            <div class="wizard__acciones">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar formación' }}
+              </button>
+              <button type="button" class="btn-primario" (click)="irAPaso(3)">Siguiente</button>
+            </div>
+          </form>
+        </section>
+      }
+
+      @if (paso() === 3) {
+        <section class="wizard__seccion-paso">
+          <h2>Experiencia laboral</h2>
+
+          @if (r.experiencias.length) {
+            <ul class="lista-bloques">
+              @for (e of r.experiencias; track e.id) {
+                <li>{{ e.cargo }} — {{ e.institucion }} ({{ e.clasificacion }})</li>
+              }
+            </ul>
+          }
+
+          <form #expForm="ngForm" (ngSubmit)="agregarExperiencia(expForm)" novalidate>
+            <div class="campo campo--ancho">
+              <label for="institucion_e">Institución o Empresa *</label>
+              <input id="institucion_e" name="institucion" type="text" required [(ngModel)]="nuevaExperiencia.institucion" />
+            </div>
+
+            <div class="campo">
+              <label for="cargo_e">Cargo *</label>
+              <input id="cargo_e" name="cargo" type="text" required [(ngModel)]="nuevaExperiencia.cargo" />
+            </div>
+
+            <div class="campo">
+              <label for="tipo_institucion">Tipo de Institución *</label>
+              <select id="tipo_institucion" name="tipo_institucion" required [(ngModel)]="nuevaExperiencia.tipo_institucion">
+                <option value="PUBLICA">PÚBLICA</option>
+                <option value="PRIVADA">PRIVADA</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="clasificacion">Clasificación *</label>
+              <select id="clasificacion" name="clasificacion" required [(ngModel)]="nuevaExperiencia.clasificacion">
+                <option value="GENERAL">GENERAL</option>
+                <option value="ESPECIFICA">ESPECÍFICA</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="fecha_inicio_e">Fecha de inicio *</label>
+              <input id="fecha_inicio_e" name="fecha_inicio" type="date" required [(ngModel)]="nuevaExperiencia.fecha_inicio" />
+            </div>
+
+            <div class="campo">
+              <label for="fecha_fin_e">Fecha Fin *</label>
+              <input id="fecha_fin_e" name="fecha_fin" type="date" required [(ngModel)]="nuevaExperiencia.fecha_fin" />
+            </div>
+
+            <div class="campo">
+              <label for="modalidad_contrato">Modalidad de contrato *</label>
+              <input id="modalidad_contrato" name="modalidad_contrato" type="text" required [(ngModel)]="nuevaExperiencia.modalidad_contrato" />
+            </div>
+
+            <div class="campo">
+              <label for="lugar_trabajo">Lugar de Trabajo *</label>
+              <input id="lugar_trabajo" name="lugar_trabajo" type="text" required [(ngModel)]="nuevaExperiencia.lugar_trabajo" />
+            </div>
+
+            <div class="campo campo--ancho">
+              <label for="motivo_desvinculacion">Motivo de Desvinculación *</label>
+              <input
+                id="motivo_desvinculacion"
+                name="motivo_desvinculacion"
+                type="text"
+                required
+                [(ngModel)]="nuevaExperiencia.motivo_desvinculacion"
+              />
+            </div>
+
+            <div class="campo campo--ancho">
+              <label for="documento_url_e">URL del documento adjunto *</label>
+              <input id="documento_url_e" name="documento_url" type="text" required [(ngModel)]="nuevaExperiencia.documento_url" />
+            </div>
+
+            <div class="wizard__acciones">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar experiencia' }}
+              </button>
+              <button type="button" class="btn-primario" (click)="irAPaso(4)">Siguiente</button>
+            </div>
+          </form>
+        </section>
+      }
+
+      @if (paso() === 4) {
+        <section class="wizard__seccion-paso">
+          <h2>Conocimientos y habilidades</h2>
+
+          @if (r.conocimientos.length) {
+            <ul class="lista-bloques">
+              @for (c of r.conocimientos; track c.id) {
+                <li>{{ c.nombre_curso }} — {{ c.institucion }} ({{ c.duracion_horas }} h)</li>
+              }
+            </ul>
+          }
+
+          <form #conForm="ngForm" (ngSubmit)="agregarConocimiento(conForm)" novalidate>
+            <div class="campo">
+              <label for="tipo_curso">Tipo del curso *</label>
+              <select id="tipo_curso" name="tipo_curso" required [(ngModel)]="nuevoConocimiento.tipo_curso">
+                <option value="OBLIGATORIO">OBLIGATORIO</option>
+                <option value="OPCIONAL">OPCIONAL</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label for="nombre_curso">Nombre del curso *</label>
+              <input id="nombre_curso" name="nombre_curso" type="text" required [(ngModel)]="nuevoConocimiento.nombre_curso" />
+            </div>
+
+            <div class="campo">
+              <label for="duracion_horas">Duración (horas académicas) *</label>
+              <input id="duracion_horas" name="duracion_horas" type="number" min="1" required [(ngModel)]="nuevoConocimiento.duracion_horas" />
+            </div>
+
+            <div class="campo">
+              <label for="institucion_c">Institución *</label>
+              <input id="institucion_c" name="institucion" type="text" required [(ngModel)]="nuevoConocimiento.institucion" />
+            </div>
+
+            <div class="campo">
+              <label for="fecha_emision_c">Fecha de emisión *</label>
+              <input id="fecha_emision_c" name="fecha_emision" type="date" required [(ngModel)]="nuevoConocimiento.fecha_emision" />
+            </div>
+
+            <div class="campo campo--ancho">
+              <label for="documento_url_c">URL del documento adjunto *</label>
+              <input id="documento_url_c" name="documento_url" type="text" required [(ngModel)]="nuevoConocimiento.documento_url" />
+            </div>
+
+            <div class="wizard__acciones">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar conocimiento' }}
+              </button>
+              <button type="button" class="btn-primario" (click)="irAPaso(6)">Siguiente</button>
+            </div>
+          </form>
+        </section>
+      }
+
+      @if (paso() === 6) {
+        <section class="wizard__seccion-paso">
+          <h2>Confirmar postulación</h2>
+
+          <dl class="detalle__datos">
+            <div>
+              <dt>Postulante</dt>
+              <dd>{{ r.postulante.nombres }} {{ r.postulante.apellido_paterno }} {{ r.postulante.apellido_materno }}</dd>
+            </div>
+            <div>
+              <dt>Formaciones registradas</dt>
+              <dd>{{ r.formaciones.length }}</dd>
+            </div>
+            <div>
+              <dt>Experiencia general</dt>
+              <dd>{{ r.experiencias_general.length }}</dd>
+            </div>
+            <div>
+              <dt>Experiencia específica</dt>
+              <dd>{{ r.experiencias_especifica.length }}</dd>
+            </div>
+            <div>
+              <dt>Conocimientos registrados</dt>
+              <dd>{{ r.conocimientos.length }}</dd>
+            </div>
+          </dl>
+
+          <p class="wizard__nota">
+            Se exige al menos 1 bloque de Formación Académica y al menos 1 de Experiencia Laboral General antes de
+            poder confirmar.
+          </p>
+
+          <div class="wizard__acciones">
+            <button type="button" class="btn-primario" [disabled]="confirmando()" (click)="confirmar()">
+              {{ confirmando() ? 'Enviando...' : 'Confirmar y Enviar' }}
+            </button>
+          </div>
+        </section>
+      }
+    </article>
+  }
+</main>

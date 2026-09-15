@@ -1,0 +1,377 @@
+:host {
+  display: block;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: var(--bs-secondary, #4b4b49);
+  background: #fff;
+}
+
+.topbar {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.topbar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.logo__mark {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--bs-primary, #cbab58);
+}
+
+.logo__sub {
+  font-size: 8px;
+  color: #888;
+  letter-spacing: 0.02em;
+}
+
+.menu {
+  display: flex;
+  gap: 18px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.menu a {
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.caret {
+  font-size: 10px;
+}
+
+.btn-oficina {
+  background: var(--bs-dark, #1c120e);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.topbar__acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.btn-cd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0b6fd6, #0a4fa8);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 24px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(10, 79, 168, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-cd:hover {
+  box-shadow: 0 4px 12px rgba(10, 79, 168, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-cd:active {
+  transform: translateY(0);
+}
+
+.btn-cd__icono {
+  flex-shrink: 0;
+}
+
+.cd-usuario {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f6ff;
+  border: 1px solid #cfe1fb;
+  border-radius: 24px;
+  padding: 6px 8px 6px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.cd-usuario__icono {
+  color: #0a4fa8;
+  flex-shrink: 0;
+}
+
+.cd-usuario__nombre {
+  color: #0a4fa8;
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd-usuario__salir {
+  background: #fff;
+  border: 1px solid #cfe1fb;
+  color: var(--bs-secondary, #4b4b49);
+  border-radius: 18px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cd-usuario__salir:hover {
+  background: #eef3f9;
+}
+
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 20px;
+}
+
+.hero__texto {
+  flex: 1;
+}
+
+.hero__texto h1 {
+  font-size: 26px;
+  margin: 0 0 10px;
+}
+
+.hero__texto p {
+  font-size: 15px;
+  color: #555;
+}
+
+.hero__imagen {
+  flex: 1;
+  min-height: 160px;
+  border: 1px solid #ccc;
+  background-image: url('/gestora_logo_web.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.contenido {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 20px 60px;
+}
+
+.titulo-seccion {
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ccc;
+  border-radius: 24px;
+  padding: 8px 16px;
+  max-width: 480px;
+}
+
+.buscador__icono {
+  flex-shrink: 0;
+  color: var(--bs-secondary, #4b4b49);
+  font-size: 16px;
+}
+
+.buscador input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  flex: 1;
+}
+
+.busqueda-avanzada {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin: 6px 0 18px;
+  cursor: pointer;
+}
+
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 16px;
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  padding: 8px 2px;
+  cursor: pointer;
+  color: #666;
+  border-bottom: 2px solid transparent;
+}
+
+.tabs button.activo {
+  color: var(--bs-dark, #1c120e);
+  font-weight: 600;
+  border-bottom-color: var(--bs-primary, #cbab58);
+}
+
+.filtros {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filtros select {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  min-width: 160px;
+}
+
+.mensaje-error {
+  color: var(--bs-danger, #bf1b2d);
+}
+
+.mensaje-cargando,
+.mensaje-vacio {
+  color: #666;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.debug-json {
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.debug-json summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.debug-json pre {
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.tarjeta__icono {
+  font-size: 28px;
+  color: var(--bs-secondary, #4b4b49);
+}
+
+.tarjeta__cuerpo {
+  flex: 1;
+}
+
+.tarjeta__titulo-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tarjeta__titulo-fila h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.badge {
+  font-size: 11px;
+  border: 1px solid var(--bs-primary, #cbab58);
+  color: var(--bs-primary, #cbab58);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.badge--ubicacion {
+  border-color: var(--bs-secondary, #4b4b49);
+  color: var(--bs-secondary, #4b4b49);
+}
+
+.tarjeta__cuerpo p {
+  margin: 3px 0;
+  font-size: 13px;
+  color: #444;
+}
+
+.btn-detalle {
+  background: #fff;
+  border: 1px solid var(--bs-dark, #1c120e);
+  color: var(--bs-dark, #1c120e);
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-detalle:hover {
+  background: var(--bs-primary-bg-subtle, #f4eedd);
+}
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  font-size: 13px;
+}
+
+.paginacion button {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.paginacion button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,0 +1,150 @@
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="logo">
+      <span class="logo__mark">Gestora</span>
+    </div>
+    <nav class="menu">
+      <a>Institucional</a>
+      <a>Sistema Integral de Pensiones</a>
+      <a>Transparencia</a>
+      <a>Publicaciones</a>
+      <a>Contáctenos</a>
+    </nav>
+    <div class="topbar__acciones">
+      <button class="btn-oficina">Oficina Virtual</button>
+
+      @if (auth.loaded()) {
+        @if (auth.session().authenticated) {
+          <div class="cd-usuario">
+            <svg class="cd-usuario__icono" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2" />
+              <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+            </svg>
+            <span class="cd-usuario__nombre">{{ auth.session().user?.['nombres'] ?? auth.session().user?.['nombre'] ?? 'Ciudadano' }}</span>
+            <button type="button" class="cd-usuario__salir" (click)="auth.logout()">Cerrar sesión</button>
+          </div>
+        } @else {
+          <button type="button" class="btn-cd" (click)="auth.login()">
+            <span>Iniciar sesión con Ciudadanía Digital</span>
+          </button>
+        }
+      }
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero__texto">
+    <h1>Trabaja con propósito, contribuyendo al bienestar del país</h1>
+    <p>Se parte de nuestro equipo de trabajo</p>
+  </div>
+  <div class="hero__imagen" aria-hidden="true"></div>
+</section>
+
+<main class="contenido">
+  <h2 class="titulo-seccion">Convocatorias vigentes ({{ totalRegistros() }})</h2>
+
+  <div class="buscador">
+    <svg class="buscador__icono" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        d="M10.5 3a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Zm10.5 18-5.6-5.6"
+      />
+    </svg>
+    <input
+      type="search"
+      placeholder="Buscar por cargo, área o palabra clave"
+      [(ngModel)]="buscar"
+      (keyup.enter)="buscarClick()"
+    />
+  </div>
+
+  <div class="tabs">
+    <button [class.activo]="pestana === 'todos'" (click)="pestana = 'todos'">Todos</button>
+    <button [class.activo]="pestana === 'vigentes'" (click)="pestana = 'vigentes'">Vigentes</button>
+  </div>
+
+  <div class="filtros">
+    <select [(ngModel)]="area" (change)="buscarClick()">
+      <option value="">Área</option>
+      <option value="UTH">Unidad de Talento Humano</option>
+      <option value="GTEC">Gerencia de Tecnología</option>
+      <option value="GFIN">Gerencia de Finanzas</option>
+      <option value="GOPE">Gerencia de Operaciones</option>
+      <option value="GCOM">Gerencia Comercial</option>
+      <option value="GLEG">Gerencia Legal</option>
+    </select>
+    <select [(ngModel)]="tipoContrato" (change)="buscarClick()">
+      <option value="">Tipo de contrato</option>
+      <option value="PERMANENTE">Permanente</option>
+      <option value="EVENTUAL">Eventual</option>
+      <option value="CONSULTORIA_LINEA">Consultoría en Línea</option>
+      <option value="CONSULTORIA_PRODUCTO">Consultoría por Producto</option>
+    </select>
+    <select [(ngModel)]="ubicacion" (change)="buscarClick()">
+      <option value="">Ubicación</option>
+      <option value="LA_PAZ">La Paz</option>
+      <option value="COCHABAMBA">Cochabamba</option>
+      <option value="SANTA_CRUZ">Santa Cruz</option>
+      <option value="ORURO">Oruro</option>
+      <option value="POTOSI">Potosí</option>
+      <option value="CHUQUISACA">Chuquisaca</option>
+      <option value="TARIJA">Tarija</option>
+      <option value="BENI">Beni</option>
+      <option value="PANDO">Pando</option>
+    </select>
+  </div>
+
+  @if (error()) {
+    <p class="mensaje-error">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <p class="mensaje-cargando">Cargando convocatorias...</p>
+  } @else if (convocatorias().length === 0 && !error()) {
+    <p class="mensaje-vacio">No hay convocatorias vigentes con estos filtros.</p>
+  }
+
+  <div class="lista">
+
+    <details class="debug-json">
+      <summary>Debug: convocatorias (JSON)</summary>
+      <pre>{{ convocatorias() | json }}</pre>
+    </details>
+
+    @for (c of convocatorias(); track c.codigo) {
+      <article class="tarjeta">
+        <svg class="tarjeta__icono" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2" />
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"
+          />
+        </svg>
+        <div class="tarjeta__cuerpo">
+          <div class="tarjeta__titulo-fila">
+            <h3>{{ tituloCase(c.cargo) }}</h3>
+            <span class="badge">{{ etiquetaTipoConvocatoria(c) }}</span>
+            <span class="badge badge--ubicacion">{{ tituloCase(c.ubicacion) }}</span>
+          </div>
+          <p>Vacantes: {{ c.vacantes }}</p>
+          <p class="tarjeta__area">{{ tituloCase(c.area_solicitante) }}</p>
+          <p>Fecha límite de postulación: {{ fechaCorta(c.fecha_limite_postulacion) }}</p>
+        </div>
+        <button class="btn-detalle" (click)="verDetalle(c.codigo)">Ver detalle</button>
+      </article>
+    }
+  </div>
+
+  <div class="paginacion">
+    <button (click)="anteriorPagina()" [disabled]="page <= 1">&lt;&lt;</button>
+    <span>{{ page }} de {{ totalPaginas }}</span>
+    <button (click)="siguientePagina()" [disabled]="page >= totalPaginas">&gt;&gt;</button>
+  </div>
+</main>

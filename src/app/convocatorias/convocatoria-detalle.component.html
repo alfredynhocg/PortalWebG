@@ -1,0 +1,137 @@
+<main class="contenido">
+  <button type="button" class="btn-volver" (click)="volver()">&lt; Volver a convocatorias</button>
+
+  @if (cargando()) {
+    <p class="mensaje-cargando">Cargando convocatoria...</p>
+  } @else if (error()) {
+    <p class="mensaje-error">{{ error() }}</p>
+  } @else if (convocatoria(); as c) {
+    <article class="detalle">
+      <div class="detalle__titulo-fila">
+        <h1>{{ tituloCase(c.cargo) }}</h1>
+        <span class="badge">{{ c.tipo_convocatoria === 'INTERNA' ? 'Interna' : 'Externo' }}</span>
+        @if (!c.vigente) {
+          <span class="badge badge--cerrada">Cerrada</span>
+        }
+      </div>
+      <p class="detalle__codigo">Código: {{ c.codigo }}</p>
+
+      @if (c.vigente) {
+        <button type="button" class="btn-primario" (click)="postularme()">Postularme</button>
+      }
+
+      <dl class="detalle__datos">
+        <div>
+          <dt>Área solicitante</dt>
+          <dd>{{ tituloCase(c.area_solicitante) }}</dd>
+        </div>
+        <div>
+          <dt>Ubicación</dt>
+          <dd>{{ tituloCase(c.ubicacion) }}</dd>
+        </div>
+        <div>
+          <dt>Tipo de contrato</dt>
+          <dd>{{ tituloCase(c.tipo_contrato) }}</dd>
+        </div>
+        <div>
+          <dt>Vacantes</dt>
+          <dd>{{ c.vacantes }}</dd>
+        </div>
+        <div>
+          <dt>Fecha de publicación</dt>
+          <dd>{{ fechaCorta(c.fecha_publicacion) }}</dd>
+        </div>
+        <div>
+          <dt>Fecha límite de postulación</dt>
+          <dd>{{ fechaCorta(c.fecha_limite_postulacion) }}</dd>
+        </div>
+        <div>
+          <dt>Contacto para consultas</dt>
+          <dd>{{ c.contacto_consultas }}</dd>
+        </div>
+      </dl>
+
+      @if (c.descripcion_cargo) {
+        <section class="detalle__seccion">
+          <h2>Descripción del cargo</h2>
+          <p>{{ c.descripcion_cargo }}</p>
+        </section>
+      }
+
+      @if (c.funciones_principales?.length) {
+        <section class="detalle__seccion">
+          <h2>Funciones principales</h2>
+          <ul>
+            @for (funcion of c.funciones_principales; track $index) {
+              <li>{{ funcion }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (c.requisitos; as r) {
+        <section class="detalle__seccion">
+          <h2>Requisitos</h2>
+          <dl class="detalle__datos">
+            <div>
+              <dt>Denominación</dt>
+              <dd>{{ r.denominacion }}</dd>
+            </div>
+            <div>
+              <dt>Nivel salarial</dt>
+              <dd>{{ r.nivel_salarial }}</dd>
+            </div>
+            <div>
+              <dt>Haber mensual</dt>
+              <dd>Bs. {{ r.haber_mensual }} ({{ r.haber_mensual_literal }})</dd>
+            </div>
+            <div>
+              <dt>Formación</dt>
+              <dd>{{ r.formacion }}</dd>
+            </div>
+            <div>
+              <dt>Área profesional</dt>
+              <dd>{{ r.area_profesional }}</dd>
+            </div>
+            <div>
+              <dt>Experiencia general</dt>
+              <dd>{{ r.experiencia_general }}</dd>
+            </div>
+            <div>
+              <dt>Experiencia específica</dt>
+              <dd>{{ r.experiencia_especifica }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
+
+      @if (formularioCampos().length) {
+        <section class="detalle__seccion">
+          <h2>Formulario de convocatoria publicada</h2>
+          <table class="detalle__tabla-formulario">
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Obligatorio</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (campo of formularioCampos(); track campo.frm_campo) {
+                <tr>
+                  <td>{{ campo.frm_etiqueta || campo.frm_campo }}</td>
+                  <td>{{ campo.frm_tipo }}</td>
+                  <td>{{ campo.frm_obligatorio === 'true' ? 'Sí' : 'No' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      } @else if (formularioError()) {
+        <section class="detalle__seccion">
+          <p class="mensaje-error">{{ formularioError() }}</p>
+        </section>
+      }
+    </article>
+  }
+</main>

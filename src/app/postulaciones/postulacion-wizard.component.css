@@ -1,0 +1,206 @@
+:host {
+  display: block;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: var(--bs-secondary, #4b4b49);
+  background: #fff;
+}
+
+.contenido {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.btn-volver {
+  background: none;
+  border: none;
+  color: var(--bs-dark, #1c120e);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.mensaje-cargando {
+  color: #666;
+}
+
+.wizard {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 24px;
+}
+
+.wizard h1 {
+  font-size: 20px;
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+.wizard__paso {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.wizard__pasos {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.wizard__pasos button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #666;
+}
+
+.wizard__pasos button.activo {
+  background: var(--bs-primary, #cbab58);
+  border-color: var(--bs-primary, #cbab58);
+  color: #fff;
+}
+
+.wizard__seccion-paso h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.wizard__seccion-paso form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 14px 20px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.lista-bloques {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.lista-bloques li {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campo--ancho {
+  grid-column: 1 / -1;
+}
+
+.campo--checkbox label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+.campo label {
+  font-size: 12px;
+  color: #888;
+}
+
+.campo input,
+.campo select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.wizard__acciones {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-primario {
+  background: var(--bs-primary, #cbab58);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secundario {
+  background: none;
+  border: 1px solid var(--bs-primary, #cbab58);
+  color: var(--bs-primary, #cbab58);
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.mensaje-error {
+  color: var(--bs-danger, #bf1b2d);
+  font-size: 13px;
+}
+
+.mensaje-exito {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.mensaje-exito h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.mensaje-exito__nota {
+  color: #888;
+  font-size: 13px;
+  margin: 16px 0;
+}
+
+.detalle__datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 16px 32px;
+  margin: 0 0 16px;
+}
+
+.detalle__datos dt {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.detalle__datos dd {
+  font-size: 14px;
+  margin: 0;
+  color: #333;
+}
+
+.wizard__nota {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 16px;
+}
