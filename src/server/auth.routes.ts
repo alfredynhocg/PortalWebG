@@ -61,6 +61,9 @@ authRouter.get('/login', async (req, res, next) => {
       expectedNonce: txn.nonce,
     });
 
+    console.log('[Ciudadania Digital] respuesta del token endpoint:', JSON.stringify(tokens, null, 2));
+    console.log('[Ciudadania Digital] claims del id_token:', JSON.stringify(tokens.claims(), null, 2));
+
     req.session.user = tokens.claims();
     req.session.idToken = tokens.id_token;
     delete req.session.oidcTxn;

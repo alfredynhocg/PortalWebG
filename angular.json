@@ -63,6 +63,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": ["anybody-database-mating-adaptive.trycloudflare.com"]
+          },
           "configurations": {
             "production": {
               "buildTarget": "portalWeb:build:production"
