@@ -5,8 +5,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ConvocatoriasService } from './convocatorias.service';
 import { ConvocatoriaDetalle, FormularioCampo } from './convocatoria.model';
 
-// Tipos decorativos del motor de formularios (títulos/subtítulos) que no
-// representan un dato a mostrar en la lista de campos.
 const TIPOS_NO_CAMPO = new Set(['TITLE', 'SUBTITLE', 'BUTTON_FA', 'GRID']);
 
 @Component({
@@ -51,8 +49,6 @@ export class ConvocatoriaDetalleComponent implements OnInit {
       },
     });
 
-    // Independiente del detalle: si este servicio falla, no debe tumbar el
-    // resto de la página (solo se oculta esta sección).
     this.convocatoriasService.formularioPublicacion().subscribe({
       next: (respuesta) => {
         const campos = (respuesta.data.campos ?? []).filter((c) => !TIPOS_NO_CAMPO.has(c.frm_tipo));

@@ -78,3 +78,35 @@ export interface FormularioPublicacionResponse {
   data: FormularioPublicacion;
   success: { code: number; mensaje: string };
 }
+
+// GET /portal/convocatorias/{codigo}/formulario: la misma estructura de la
+// plantilla, pero cada campo trae además su `valor` para esa convocatoria.
+export interface FormularioCampoConValor extends FormularioCampo {
+  valor?: string | null;
+}
+
+export interface FormularioConvocatoria extends Omit<FormularioPublicacion, 'campos'> {
+  campos: FormularioCampoConValor[];
+}
+
+export interface FormularioConvocatoriaResponse {
+  data: FormularioConvocatoria;
+  success: { code: number; mensaje: string };
+}
+
+// GET /portal/convocatorias/metricas
+export interface MetricasConvocatorias {
+  convocatorias_vigentes: number;
+  departamentos: number;
+  areas_profesionales: number;
+  areas_solicitantes: number;
+  vacantes_totales: number;
+  por_departamento: { ubicacion: string | null; total: number }[];
+  por_tipo_contrato: { tipo_contrato: string | null; total: number }[];
+  por_area_solicitante: { area_solicitante: string | null; total: number }[];
+}
+
+export interface MetricasResponse {
+  data: MetricasConvocatorias;
+  success: { code: number; mensaje: string };
+}

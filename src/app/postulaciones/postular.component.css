@@ -134,3 +134,63 @@
   font-size: 13px;
   margin-top: 16px;
 }
+
+.campo input.ng-touched.ng-invalid,
+.campo select.ng-touched.ng-invalid {
+  border-color: var(--bs-danger, #bf1b2d);
+}
+
+/* Documentos (subida de archivos) */
+.wizard__nota {
+  grid-column: 1 / -1;
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.campo input[type='file'] {
+  padding: 0.4rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.vista-foto {
+  display: block;
+  width: 120px;
+  height: 120px;
+  margin-top: 0.5rem;
+  border: 2px solid #cbab58;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.adjunto {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.adjunto--subiendo {
+  color: #6b7280;
+}
+
+.adjunto--listo {
+  color: #1b5e37;
+  font-weight: 600;
+}
+
+.adjunto--error {
+  color: #bf1b2d;
+  font-weight: 600;
+}
+
+.btn-enlace {
+  margin-left: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #a8923a;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

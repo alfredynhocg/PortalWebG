@@ -204,3 +204,35 @@
   color: #888;
   margin: 0 0 16px;
 }
+
+.campo input.ng-touched.ng-invalid,
+.campo select.ng-touched.ng-invalid {
+  border-color: var(--bs-danger, #bf1b2d);
+}
+
+/* Adjuntos (subida de archivos) */
+.campo input[type='file'] {
+  padding: 0.4rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.adjunto {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.adjunto--subiendo {
+  color: #6b7280;
+}
+
+.adjunto--listo {
+  color: #1b5e37;
+  font-weight: 600;
+}
+
+.adjunto--error {
+  color: #bf1b2d;
+  font-weight: 600;
+}

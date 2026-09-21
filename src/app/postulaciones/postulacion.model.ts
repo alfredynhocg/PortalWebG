@@ -25,14 +25,39 @@ export interface DatosPersonalesPostulante {
   nro_libreta_militar?: string;
   grupo_sanguineo?: string;
   contacto_emergencia: string;
+  // Los archivos físicos (foto, cédula, libreta) ya no se mandan acá: se suben
+  // después de crear la postulación con PostulacionesService.subirArchivo().
+  // Estos campos siguen aceptando una URL http(s) por compatibilidad con el API.
   foto_perfil_url?: string;
   cedula_identidad_doc_url?: string;
   libreta_militar_doc_url?: string;
 }
 
+// Tipos de archivo que acepta POST /portal/postulaciones/{id}/archivos.
+// Los "simples" quedan guardados en la postulación; los de bloque solo devuelven
+// la ruta, que se manda luego como `documento_url` del bloque.
+export type TipoArchivoSimple = 'foto_perfil' | 'cedula' | 'libreta';
+export type TipoArchivoBloque = 'formacion' | 'experiencia' | 'conocimiento';
+export type TipoArchivo = TipoArchivoSimple | TipoArchivoBloque;
+
+export interface ArchivoSubido {
+  tipo: TipoArchivo;
+  url: string;
+  nombre_original: string;
+  tamano: number;
+}
+
+export interface ArchivoSubidoResponse {
+  data: ArchivoSubido;
+  success: { code: number; mensaje: string };
+}
+
+// `id` es el CÓDIGO DE ACCESO (UUID) que devuelve el paso 1, no un número: es
+// la única forma de volver a la postulación (ver PostulacionesService.guardarAcceso).
+// `cas_id` es el id numérico de la CONVOCATORIA publicada.
 export interface Postulacion {
-  id: number;
-  postulante_id: number;
+  id: string;
+  postulante_id: string;
   cas_id: number;
   codigo_convocatoria: string;
   estado: string;
@@ -64,7 +89,7 @@ export interface FormacionInput {
 
 export interface Formacion extends FormacionInput {
   id: number;
-  postulacion_id: number;
+  postulacion_id: string;
 }
 
 // Paso 3 — Experiencia Laboral (repetible). Espeja
@@ -84,7 +109,7 @@ export interface ExperienciaInput {
 
 export interface Experiencia extends ExperienciaInput {
   id: number;
-  postulacion_id: number;
+  postulacion_id: string;
 }
 
 // Paso 4 — Conocimientos y Habilidades (repetible). Espeja
@@ -100,11 +125,11 @@ export interface ConocimientoInput {
 
 export interface Conocimiento extends ConocimientoInput {
   id: number;
-  postulacion_id: number;
+  postulacion_id: string;
 }
 
 export interface PostulanteResumen {
-  id: number;
+  id: string;
   ci: string;
   nombres: string;
   apellido_paterno: string;
@@ -128,5 +153,32 @@ export interface PostulacionResumenResponse {
 
 export interface BloqueResponse<T> {
   data: T;
+  success: { code: number; mensaje: string };
+}
+
+// Fila de GET /portal/postulantes/{ci}/postulaciones. No trae el código de
+// acceso (UUID): el portal lo guardó al crear la postulación y la relaciona
+// por `convocatoria`. `convocatoria_activa` es false si la convocatoria fue
+// anulada, archivada o ya no está publicada.
+export interface MiPostulacion {
+  fecha_registro: string | null; // ISO-8601 con zona
+  convocatoria: string;
+  estado: string;
+  codigo_postulacion: string | null;
+  cargo: string | null;
+  area_solicitante: string | null;
+  ubicacion: string | null;
+  fecha_publicacion: string | null;
+  fecha_limite_postulacion: string | null;
+  convocatoria_activa: boolean;
+}
+
+export interface MisPostulacionesResponse {
+  data: MiPostulacion[];
+  success: { code: number; mensaje: string };
+}
+
+export interface QuitarPostulacionResponse {
+  data: null;
   success: { code: number; mensaje: string };
 }

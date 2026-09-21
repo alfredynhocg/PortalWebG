@@ -8,7 +8,9 @@ import {
   ConvocatoriasFiltros,
   ConvocatoriasResponse,
   ConvocatoriasStreamResultado,
+  FormularioConvocatoriaResponse,
   FormularioPublicacionResponse,
+  MetricasResponse,
 } from './convocatoria.model';
 
 @Injectable({ providedIn: 'root' })
@@ -62,6 +64,19 @@ export class ConvocatoriasService {
       `${DEMO_CONFIG.apiBaseUrl}/portal/formularios/convocatoria-publicada`,
       { headers: this.headers() }
     );
+  }
+
+  formularioConvocatoria(codigo: string): Observable<FormularioConvocatoriaResponse> {
+    return this.http.get<FormularioConvocatoriaResponse>(
+      `${DEMO_CONFIG.apiBaseUrl}/portal/convocatorias/${codigo}/formulario`,
+      { headers: this.headers() }
+    );
+  }
+
+  metricas(): Observable<MetricasResponse> {
+    return this.http.get<MetricasResponse>(`${DEMO_CONFIG.apiBaseUrl}/portal/convocatorias/metricas`, {
+      headers: this.headers(),
+    });
   }
 
   actualizarFiltros(filtros: ConvocatoriasFiltros): void {

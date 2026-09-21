@@ -25,8 +25,8 @@
         <button type="button" [class.activo]="paso() === 6" (click)="irAPaso(6)">6. Confirmar</button>
       </nav>
 
-      @if (error()) {
-        <p class="mensaje-error">{{ error() }}</p>
+      @if (error() && paso() === 6) {
+        <p class="mensaje-error" role="alert">{{ error() }}</p>
       }
 
       @if (paso() === 2) {
@@ -115,12 +115,36 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="documento_url_f">URL del documento adjunto *</label>
-              <input id="documento_url_f" name="documento_url" type="text" required [(ngModel)]="nuevaFormacion.documento_url" />
+              <label for="archivo_f">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <input
+                id="archivo_f"
+                #archivoFormacion
+                type="file"
+                [accept]="aceptarDocumento"
+                (change)="seleccionarArchivo($event, 'formacion')"
+              />
+              <input type="hidden" name="documento_url" required [(ngModel)]="nuevaFormacion.documento_url" />
+              @switch (adjuntos().formacion.estado) {
+                @case ('subiendo') {
+                  <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().formacion.nombre }}...</p>
+                }
+                @case ('listo') {
+                  <p class="adjunto adjunto--listo">
+                    ✔ {{ adjuntos().formacion.nombre }} ({{ formatoTamano(adjuntos().formacion.tamano ?? 0) }})
+                  </p>
+                }
+                @case ('error') {
+                  <p class="adjunto adjunto--error" role="alert">{{ adjuntos().formacion.mensaje }}</p>
+                }
+              }
             </div>
 
+            @if (error()) {
+              <p class="mensaje-error" role="alert">{{ error() }}</p>
+            }
+
             <div class="wizard__acciones">
-              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().formacion.estado === 'subiendo'">
                 {{ guardandoBloque() ? 'Agregando...' : '+ Agregar formación' }}
               </button>
               <button type="button" class="btn-primario" (click)="irAPaso(3)">Siguiente</button>
@@ -200,12 +224,36 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="documento_url_e">URL del documento adjunto *</label>
-              <input id="documento_url_e" name="documento_url" type="text" required [(ngModel)]="nuevaExperiencia.documento_url" />
+              <label for="archivo_e">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <input
+                id="archivo_e"
+                #archivoExperiencia
+                type="file"
+                [accept]="aceptarDocumento"
+                (change)="seleccionarArchivo($event, 'experiencia')"
+              />
+              <input type="hidden" name="documento_url" required [(ngModel)]="nuevaExperiencia.documento_url" />
+              @switch (adjuntos().experiencia.estado) {
+                @case ('subiendo') {
+                  <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().experiencia.nombre }}...</p>
+                }
+                @case ('listo') {
+                  <p class="adjunto adjunto--listo">
+                    ✔ {{ adjuntos().experiencia.nombre }} ({{ formatoTamano(adjuntos().experiencia.tamano ?? 0) }})
+                  </p>
+                }
+                @case ('error') {
+                  <p class="adjunto adjunto--error" role="alert">{{ adjuntos().experiencia.mensaje }}</p>
+                }
+              }
             </div>
 
+            @if (error()) {
+              <p class="mensaje-error" role="alert">{{ error() }}</p>
+            }
+
             <div class="wizard__acciones">
-              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().experiencia.estado === 'subiendo'">
                 {{ guardandoBloque() ? 'Agregando...' : '+ Agregar experiencia' }}
               </button>
               <button type="button" class="btn-primario" (click)="irAPaso(4)">Siguiente</button>
@@ -256,12 +304,36 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="documento_url_c">URL del documento adjunto *</label>
-              <input id="documento_url_c" name="documento_url" type="text" required [(ngModel)]="nuevoConocimiento.documento_url" />
+              <label for="archivo_c">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <input
+                id="archivo_c"
+                #archivoConocimiento
+                type="file"
+                [accept]="aceptarDocumento"
+                (change)="seleccionarArchivo($event, 'conocimiento')"
+              />
+              <input type="hidden" name="documento_url" required [(ngModel)]="nuevoConocimiento.documento_url" />
+              @switch (adjuntos().conocimiento.estado) {
+                @case ('subiendo') {
+                  <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().conocimiento.nombre }}...</p>
+                }
+                @case ('listo') {
+                  <p class="adjunto adjunto--listo">
+                    ✔ {{ adjuntos().conocimiento.nombre }} ({{ formatoTamano(adjuntos().conocimiento.tamano ?? 0) }})
+                  </p>
+                }
+                @case ('error') {
+                  <p class="adjunto adjunto--error" role="alert">{{ adjuntos().conocimiento.mensaje }}</p>
+                }
+              }
             </div>
 
+            @if (error()) {
+              <p class="mensaje-error" role="alert">{{ error() }}</p>
+            }
+
             <div class="wizard__acciones">
-              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque()">
+              <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().conocimiento.estado === 'subiendo'">
                 {{ guardandoBloque() ? 'Agregando...' : '+ Agregar conocimiento' }}
               </button>
               <button type="button" class="btn-primario" (click)="irAPaso(6)">Siguiente</button>

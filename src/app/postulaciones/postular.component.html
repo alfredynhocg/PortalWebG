@@ -6,7 +6,7 @@
       <p class="wizard__paso">Paso 1 de 6 — Datos personales</p>
 
       <form #f="ngForm" (ngSubmit)="enviar(f)" novalidate>
-        <fieldset class="wizard__seccion">
+        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
           <legend>Datos Personales</legend>
 
           <div class="campo">
@@ -25,7 +25,15 @@
 
           <div class="campo">
             <label for="complemento">Complemento</label>
-            <input id="complemento" name="complemento" type="text" maxlength="10" [(ngModel)]="datos.complemento" />
+            <input
+              id="complemento"
+              name="complemento"
+              type="text"
+              maxlength="3"
+              pattern="[0-9A-Za-z]{1,3}"
+              title="1 a 3 letras o números (p. ej. 1A)"
+              [(ngModel)]="datos.complemento"
+            />
           </div>
 
           <div class="campo">
@@ -109,7 +117,7 @@
           </div>
         </fieldset>
 
-        <fieldset class="wizard__seccion">
+        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
           <legend>Datos de Ubicación</legend>
 
           <div class="campo">
@@ -161,7 +169,7 @@
           </div>
         </fieldset>
 
-        <fieldset class="wizard__seccion">
+        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
           <legend>Datos Adicionales</legend>
 
           <div class="campo">
@@ -199,6 +207,51 @@
           </div>
         </fieldset>
 
+        <fieldset class="wizard__seccion">
+          <legend>Documentos (opcionales)</legend>
+          <p class="wizard__nota">
+            Adjunta los archivos originales. Formatos: PDF o imagen JPG, PNG, WEBP (la fotografía solo imagen). Máximo
+            5 MB por archivo.
+          </p>
+
+          @for (d of documentosConfig; track d.tipo) {
+            @let doc = documentos()[d.tipo];
+            <div class="campo campo--ancho">
+              <label [for]="'doc_' + d.tipo">{{ d.etiqueta }}</label>
+              <input
+                #entrada
+                [id]="'doc_' + d.tipo"
+                type="file"
+                [accept]="d.soloImagen ? aceptarImagen : aceptarDocumento"
+                [disabled]="enviando() || doc.estado === 'listo'"
+                (change)="seleccionarDocumento($event, d.tipo, d.soloImagen)"
+              />
+
+              @if (doc.vista) {
+                <img class="vista-foto" [src]="doc.vista" alt="Vista previa de la fotografía" />
+              }
+
+              @switch (doc.estado) {
+                @case ('pendiente') {
+                  <p class="adjunto">
+                    {{ doc.archivo?.name }} ({{ formatoTamano(doc.archivo?.size ?? 0) }})
+                    <button type="button" class="btn-enlace" (click)="quitarDocumento(d.tipo, entrada)">Quitar</button>
+                  </p>
+                }
+                @case ('subiendo') {
+                  <p class="adjunto adjunto--subiendo">Subiendo {{ doc.archivo?.name }}...</p>
+                }
+                @case ('listo') {
+                  <p class="adjunto adjunto--listo">✔ {{ doc.archivo?.name }} subido</p>
+                }
+                @case ('error') {
+                  <p class="adjunto adjunto--error" role="alert">{{ doc.mensaje }}</p>
+                }
+              }
+            </div>
+          }
+        </fieldset>
+
         @if (error()) {
           <p class="mensaje-error">{{ error() }}</p>
           @if (postulacionExistenteId()) {
@@ -206,11 +259,16 @@
               Continuar esa postulación
             </button>
           }
+          @if (postulacionCreadaId()) {
+            <button type="button" class="btn-secundario" (click)="continuarSinDocumentos()">
+              Continuar sin estos documentos
+            </button>
+          }
         }
 
         <div class="wizard__acciones">
           <button type="submit" class="btn-primario" [disabled]="enviando()">
-            {{ enviando() ? 'Guardando...' : 'Guardar y siguiente' }}
+            {{ enviando() ? 'Guardando...' : postulacionCreadaId() ? 'Reintentar subida' : 'Guardar y siguiente' }}
           </button>
         </div>
       </form>
