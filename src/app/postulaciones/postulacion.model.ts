@@ -40,6 +40,9 @@ export type TipoArchivoSimple = 'foto_perfil' | 'cedula' | 'libreta';
 export type TipoArchivoBloque = 'formacion' | 'experiencia' | 'conocimiento';
 export type TipoArchivo = TipoArchivoSimple | TipoArchivoBloque;
 
+// Reordenar un bloque (pág. 47 — flechas arriba/abajo).
+export type DireccionOrden = 'arriba' | 'abajo';
+
 export interface ArchivoSubido {
   tipo: TipoArchivo;
   url: string;
@@ -49,6 +52,32 @@ export interface ArchivoSubido {
 
 export interface ArchivoSubidoResponse {
   data: ArchivoSubido;
+  success: { code: number; mensaje: string };
+}
+
+// Paso 5 — Documentos (pág. 54-55). PortalDocumentoPostulacionController::documentos().
+// `ver` es la ruta relativa que informa el backend; el portal arma su propia URL
+// con PostulacionesService.verDocumento(tipo, bloque_id) en vez de usarla tal
+// cual (mismo motivo que documentado ahí: evita depender del prefijo exacto).
+export interface DocumentoChecklistItem {
+  tipo: TipoArchivo;
+  etiqueta: string | null;
+  obligatorio: boolean;
+  cargado: boolean;
+  bloque_id: number | null;
+  ver: string | null;
+}
+
+export interface ChecklistDocumentos {
+  postulacion_id: string;
+  editable: boolean;
+  completo: boolean;
+  documentos: DocumentoChecklistItem[];
+  pendientes: string[];
+}
+
+export interface ChecklistDocumentosResponse {
+  data: ChecklistDocumentos;
   success: { code: number; mensaje: string };
 }
 
@@ -156,14 +185,23 @@ export interface BloqueResponse<T> {
   success: { code: number; mensaje: string };
 }
 
-// Fila de GET /portal/postulantes/{ci}/postulaciones. No trae el código de
-// acceso (UUID): el portal lo guardó al crear la postulación y la relaciona
-// por `convocatoria`. `convocatoria_activa` es false si la convocatoria fue
-// anulada, archivada o ya no está publicada.
+// Estado del catálogo cerrado del PDF (pág. 59-60), calculado por el backend:
+// ENVIADO = enviada, sin evaluar; EN_REVISION = evaluación parcial;
+// HABILITADO/INHABILITADO = las 4 etapas evaluadas (Datos/Formación/
+// Experiencia/Conocimientos).
+export type EstadoMiPostulacion = 'ELABORADO' | 'ENVIADO' | 'EN_REVISION' | 'HABILITADO' | 'INHABILITADO';
+
+// Fila de GET /portal/postulantes/{ci}/postulaciones.
+// `id` es el código de acceso (UUID) — con él se puede volver al wizard.
+// `editable`/`puede_quitar`: PO_ESTADO=ELABORADO y, para puede_quitar, además
+// la convocatoria activa y dentro de plazo. `convocatoria_activa` es false si
+// la convocatoria fue anulada, archivada o ya no está publicada.
 export interface MiPostulacion {
+  id: string;
   fecha_registro: string | null; // ISO-8601 con zona
+  fecha_envio: string | null;
   convocatoria: string;
-  estado: string;
+  estado: EstadoMiPostulacion;
   codigo_postulacion: string | null;
   cargo: string | null;
   area_solicitante: string | null;
@@ -171,6 +209,8 @@ export interface MiPostulacion {
   fecha_publicacion: string | null;
   fecha_limite_postulacion: string | null;
   convocatoria_activa: boolean;
+  editable: boolean;
+  puede_quitar: boolean;
 }
 
 export interface MisPostulacionesResponse {

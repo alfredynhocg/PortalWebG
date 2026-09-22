@@ -1,27 +1,38 @@
-import { Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PostulacionesService } from './postulaciones.service';
 import { UUID_RE, mensajeError } from './errores';
-import { ACEPTAR_DOCUMENTO, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
+import { aceptarPara, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
 import {
+  ChecklistDocumentos,
+  Conocimiento,
   ConocimientoInput,
+  DireccionOrden,
+  DocumentoChecklistItem,
+  Experiencia,
   ExperienciaInput,
+  Formacion,
   FormacionInput,
   Postulacion,
   PostulacionResumen,
   TipoArchivoBloque,
 } from './postulacion.model';
 
-type Paso = 2 | 3 | 4 | 6;
+type Paso = 2 | 3 | 4 | 5 | 6;
 
 // Estado del archivo adjunto de un bloque (formación, experiencia, curso). El
 // archivo se sube apenas se elige; la ruta que devuelve el API queda en el
 // `documento_url` del bloque, que se envía al agregarlo.
+// 'cargado': al editar un bloque existente. resumen() ya no expone la ruta
+// física guardada (hallazgo de seguridad corregido en el backend), así que acá
+// solo se sabe QUE ya tiene un archivo, no cuál — si el postulante no elige uno
+// nuevo, el servidor conserva el que ya tenía (ver editarFormacion() del API).
 interface Adjunto {
-  estado: 'vacio' | 'subiendo' | 'listo' | 'error';
+  estado: 'vacio' | 'subiendo' | 'listo' | 'cargado' | 'error';
   nombre?: string;
   tamano?: number;
   mensaje?: string;
@@ -39,10 +50,11 @@ const ADJUNTO_VACIO: Adjunto = { estado: 'vacio' };
   templateUrl: './postulacion-wizard.component.html',
   styleUrl: './postulacion-wizard.component.css',
 })
-export class PostulacionWizardComponent implements OnInit {
+export class PostulacionWizardComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly postulacionesService = inject(PostulacionesService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   postulacionId = '';
   codigo = '';
@@ -51,11 +63,28 @@ export class PostulacionWizardComponent implements OnInit {
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly guardandoBloque = signal(false);
+  readonly eliminandoBloque = signal(false);
+  readonly moviendoBloque = signal(false);
+  // id del bloque en edición por sección (null = modo "agregar"). El mismo
+  // formulario de siempre se reutiliza: al guardar, si hay un id acá, se manda
+  // PUT en vez de POST.
+  readonly editandoFormacionId = signal<number | null>(null);
+  readonly editandoExperienciaId = signal<number | null>(null);
+  readonly editandoConocimientoId = signal<number | null>(null);
   readonly resumen = signal<PostulacionResumen | null>(null);
   readonly confirmando = signal(false);
   readonly postulacionConfirmada = signal<Postulacion | null>(null);
 
-  readonly aceptarDocumento = ACEPTAR_DOCUMENTO;
+  // Paso 5 — Documentos (pág. 54-55).
+  readonly checklist = signal<ChecklistDocumentos | null>(null);
+  readonly cargandoChecklist = signal(false);
+  readonly cargandoVisor = signal(false);
+  readonly errorVisor = signal<string | null>(null);
+  readonly urlVisorImagen = signal<string | null>(null);
+  readonly urlVisorPdf = signal<SafeResourceUrl | null>(null);
+  private blobVisorActual: string | null = null;
+
+  readonly aceptarPara = aceptarPara;
   readonly formatoTamano = formatoTamano;
   readonly adjuntos = signal<Record<TipoArchivoBloque, Adjunto>>({
     formacion: ADJUNTO_VACIO,
@@ -119,6 +148,68 @@ export class PostulacionWizardComponent implements OnInit {
   irAPaso(paso: Paso): void {
     this.paso.set(paso);
     this.error.set(null);
+    if (paso === 5) {
+      this.cargarChecklist();
+    } else {
+      this.limpiarVisor();
+    }
+  }
+
+  private cargarChecklist(): void {
+    this.cargandoChecklist.set(true);
+    this.limpiarVisor();
+    this.postulacionesService.documentos(this.postulacionId).subscribe({
+      next: (respuesta) => {
+        this.checklist.set(respuesta.data);
+        this.cargandoChecklist.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cargandoChecklist.set(false);
+        this.error.set(mensajeError(err, 'No se pudo cargar el checklist de documentos.'));
+      },
+    });
+  }
+
+  private limpiarVisor(): void {
+    if (this.blobVisorActual) {
+      URL.revokeObjectURL(this.blobVisorActual);
+      this.blobVisorActual = null;
+    }
+    this.urlVisorImagen.set(null);
+    this.urlVisorPdf.set(null);
+    this.errorVisor.set(null);
+  }
+
+  // Ítem 5c: se pide el binario con el token (verDocumento()) y se arma una
+  // URL local (blob:) — un <img>/<iframe> con la URL del API directo no
+  // funcionaría sin el header Authorization. Se revoca la anterior antes de
+  // pedir una nueva, para no acumular blobs en memoria.
+  verDocumentoChecklist(item: DocumentoChecklistItem): void {
+    if (!item.cargado) {
+      return;
+    }
+    this.limpiarVisor();
+    this.cargandoVisor.set(true);
+    this.postulacionesService.verDocumento(this.postulacionId, item.tipo, item.bloque_id ?? undefined).subscribe({
+      next: (blob) => {
+        this.cargandoVisor.set(false);
+        const url = URL.createObjectURL(blob);
+        this.blobVisorActual = url;
+        if (blob.type === 'application/pdf') {
+          this.urlVisorPdf.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
+        } else {
+          this.urlVisorImagen.set(url);
+        }
+      },
+      error: () => {
+        this.cargandoVisor.set(false);
+        this.errorVisor.set('No se pudo cargar el documento. Puede estar dañado o no ser accesible.');
+      },
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.limpiarVisor();
   }
 
   private formacionVacia(): FormacionInput {
@@ -197,7 +288,7 @@ export class PostulacionWizardComponent implements OnInit {
 
     this.error.set(null);
     this.fijarDocumentoUrl(tipo, '');
-    const problema = validarArchivo(archivo, false);
+    const problema = validarArchivo(archivo, tipo);
     if (problema) {
       input.value = '';
       this.fijarAdjunto(tipo, { estado: 'error', mensaje: problema });
@@ -232,19 +323,55 @@ export class PostulacionWizardComponent implements OnInit {
     }
     this.error.set(null);
     this.guardandoBloque.set(true);
-    this.postulacionesService.agregarFormacion(this.postulacionId, this.nuevaFormacion).subscribe({
+    const idEditando = this.editandoFormacionId();
+    const peticion = idEditando !== null
+      ? this.postulacionesService.editarFormacion(this.postulacionId, idEditando, this.nuevaFormacion)
+      : this.postulacionesService.agregarFormacion(this.postulacionId, this.nuevaFormacion);
+    peticion.subscribe({
       next: () => {
         this.nuevaFormacion = this.formacionVacia();
         formulario.resetForm(this.nuevaFormacion);
         this.limpiarAdjunto('formacion');
+        this.editandoFormacionId.set(null);
         this.guardandoBloque.set(false);
         this.cargarResumen(false);
       },
       error: (err: HttpErrorResponse) => {
         this.guardandoBloque.set(false);
-        this.error.set(mensajeError(err, 'No se pudo agregar la formación académica.'));
+        this.error.set(
+          mensajeError(err, idEditando !== null ? 'No se pudieron guardar los cambios de la formación académica.' : 'No se pudo agregar la formación académica.')
+        );
       },
     });
+  }
+
+  // Precarga el formulario con los datos del bloque para corregirlo (pág. 47).
+  // El adjunto ya cargado no se puede mostrar (ver comentario de Adjunto): si
+  // el postulante no elige uno nuevo, agregarFormacion() no manda documento_url
+  // y el servidor conserva el que ya tenía.
+  iniciarEdicionFormacion(f: Formacion): void {
+    this.editandoFormacionId.set(f.id);
+    this.nuevaFormacion = {
+      nivel_estudios: f.nivel_estudios,
+      tipo_documento: f.tipo_documento,
+      institucion: f.institucion,
+      area_formacion: f.area_formacion,
+      fecha_inicio: f.fecha_inicio,
+      fecha_fin: f.fecha_fin,
+      nro_titulo: f.nro_titulo,
+      relacionado_cargo: f.relacionado_cargo,
+      fecha_emision: f.fecha_emision,
+      nro_registro_profesional: f.nro_registro_profesional,
+      documento_url: '',
+    };
+    this.fijarAdjunto('formacion', { estado: 'cargado' });
+    this.error.set(null);
+  }
+
+  cancelarEdicionFormacion(): void {
+    this.editandoFormacionId.set(null);
+    this.nuevaFormacion = this.formacionVacia();
+    this.limpiarAdjunto('formacion');
   }
 
   agregarExperiencia(formulario: NgForm): void {
@@ -255,19 +382,50 @@ export class PostulacionWizardComponent implements OnInit {
     }
     this.error.set(null);
     this.guardandoBloque.set(true);
-    this.postulacionesService.agregarExperiencia(this.postulacionId, this.nuevaExperiencia).subscribe({
+    const idEditando = this.editandoExperienciaId();
+    const peticion = idEditando !== null
+      ? this.postulacionesService.editarExperiencia(this.postulacionId, idEditando, this.nuevaExperiencia)
+      : this.postulacionesService.agregarExperiencia(this.postulacionId, this.nuevaExperiencia);
+    peticion.subscribe({
       next: () => {
         this.nuevaExperiencia = this.experienciaVacia();
         formulario.resetForm(this.nuevaExperiencia);
         this.limpiarAdjunto('experiencia');
+        this.editandoExperienciaId.set(null);
         this.guardandoBloque.set(false);
         this.cargarResumen(false);
       },
       error: (err: HttpErrorResponse) => {
         this.guardandoBloque.set(false);
-        this.error.set(mensajeError(err, 'No se pudo agregar la experiencia laboral.'));
+        this.error.set(
+          mensajeError(err, idEditando !== null ? 'No se pudieron guardar los cambios de la experiencia laboral.' : 'No se pudo agregar la experiencia laboral.')
+        );
       },
     });
+  }
+
+  iniciarEdicionExperiencia(e: Experiencia): void {
+    this.editandoExperienciaId.set(e.id);
+    this.nuevaExperiencia = {
+      institucion: e.institucion,
+      cargo: e.cargo,
+      tipo_institucion: e.tipo_institucion,
+      clasificacion: e.clasificacion,
+      fecha_inicio: e.fecha_inicio,
+      fecha_fin: e.fecha_fin,
+      modalidad_contrato: e.modalidad_contrato,
+      lugar_trabajo: e.lugar_trabajo,
+      motivo_desvinculacion: e.motivo_desvinculacion,
+      documento_url: '',
+    };
+    this.fijarAdjunto('experiencia', { estado: 'cargado' });
+    this.error.set(null);
+  }
+
+  cancelarEdicionExperiencia(): void {
+    this.editandoExperienciaId.set(null);
+    this.nuevaExperiencia = this.experienciaVacia();
+    this.limpiarAdjunto('experiencia');
   }
 
   agregarConocimiento(formulario: NgForm): void {
@@ -278,17 +436,156 @@ export class PostulacionWizardComponent implements OnInit {
     }
     this.error.set(null);
     this.guardandoBloque.set(true);
-    this.postulacionesService.agregarConocimiento(this.postulacionId, this.nuevoConocimiento).subscribe({
+    const idEditando = this.editandoConocimientoId();
+    const peticion = idEditando !== null
+      ? this.postulacionesService.editarConocimiento(this.postulacionId, idEditando, this.nuevoConocimiento)
+      : this.postulacionesService.agregarConocimiento(this.postulacionId, this.nuevoConocimiento);
+    peticion.subscribe({
       next: () => {
         this.nuevoConocimiento = this.conocimientoVacio();
         formulario.resetForm(this.nuevoConocimiento);
         this.limpiarAdjunto('conocimiento');
+        this.editandoConocimientoId.set(null);
         this.guardandoBloque.set(false);
         this.cargarResumen(false);
       },
       error: (err: HttpErrorResponse) => {
         this.guardandoBloque.set(false);
-        this.error.set(mensajeError(err, 'No se pudo agregar el conocimiento/habilidad.'));
+        this.error.set(
+          mensajeError(err, idEditando !== null ? 'No se pudieron guardar los cambios del conocimiento/habilidad.' : 'No se pudo agregar el conocimiento/habilidad.')
+        );
+      },
+    });
+  }
+
+  iniciarEdicionConocimiento(c: Conocimiento): void {
+    this.editandoConocimientoId.set(c.id);
+    this.nuevoConocimiento = {
+      tipo_curso: c.tipo_curso,
+      nombre_curso: c.nombre_curso,
+      duracion_horas: c.duracion_horas,
+      institucion: c.institucion,
+      fecha_emision: c.fecha_emision,
+      documento_url: '',
+    };
+    this.fijarAdjunto('conocimiento', { estado: 'cargado' });
+    this.error.set(null);
+  }
+
+  cancelarEdicionConocimiento(): void {
+    this.editandoConocimientoId.set(null);
+    this.nuevoConocimiento = this.conocimientoVacio();
+    this.limpiarAdjunto('conocimiento');
+  }
+
+  // Eliminar un bloque mal cargado (pág. 47 — "Basurero"), sin reiniciar la
+  // postulación. Mismo patrón que agregarFormacion/Experiencia/Conocimiento.
+  eliminarFormacion(bloqueId: number): void {
+    if (this.eliminandoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.eliminandoBloque.set(true);
+    this.postulacionesService.eliminarFormacion(this.postulacionId, bloqueId).subscribe({
+      next: () => {
+        this.eliminandoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo eliminar la formación académica.'));
+      },
+    });
+  }
+
+  eliminarExperiencia(bloqueId: number): void {
+    if (this.eliminandoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.eliminandoBloque.set(true);
+    this.postulacionesService.eliminarExperiencia(this.postulacionId, bloqueId).subscribe({
+      next: () => {
+        this.eliminandoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo eliminar la experiencia laboral.'));
+      },
+    });
+  }
+
+  eliminarConocimiento(bloqueId: number): void {
+    if (this.eliminandoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.eliminandoBloque.set(true);
+    this.postulacionesService.eliminarConocimiento(this.postulacionId, bloqueId).subscribe({
+      next: () => {
+        this.eliminandoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eliminandoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo eliminar el conocimiento/habilidad.'));
+      },
+    });
+  }
+
+  // Reordenar (flechas arriba/abajo, pág. 47). Puro cosmético: no cambia datos
+  // del bloque, solo su posición. Mismo patrón que eliminarX().
+  moverFormacion(bloqueId: number, direccion: DireccionOrden): void {
+    if (this.moviendoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.moviendoBloque.set(true);
+    this.postulacionesService.moverFormacion(this.postulacionId, bloqueId, direccion).subscribe({
+      next: () => {
+        this.moviendoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.moviendoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo reordenar la formación académica.'));
+      },
+    });
+  }
+
+  moverExperiencia(bloqueId: number, direccion: DireccionOrden): void {
+    if (this.moviendoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.moviendoBloque.set(true);
+    this.postulacionesService.moverExperiencia(this.postulacionId, bloqueId, direccion).subscribe({
+      next: () => {
+        this.moviendoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.moviendoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo reordenar la experiencia laboral.'));
+      },
+    });
+  }
+
+  moverConocimiento(bloqueId: number, direccion: DireccionOrden): void {
+    if (this.moviendoBloque()) {
+      return;
+    }
+    this.error.set(null);
+    this.moviendoBloque.set(true);
+    this.postulacionesService.moverConocimiento(this.postulacionId, bloqueId, direccion).subscribe({
+      next: () => {
+        this.moviendoBloque.set(false);
+        this.cargarResumen(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.moviendoBloque.set(false);
+        this.error.set(mensajeError(err, 'No se pudo reordenar el conocimiento/habilidad.'));
       },
     });
   }

@@ -1,31 +1,49 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { mensajeError } from './errores';
+import { TipoArchivo } from './postulacion.model';
 
-export const TAMANO_MAXIMO_ARCHIVO = 5 * 1024 * 1024; // 5 MB, igual que el API
+// Límites por tipo de documento (págs. 43-53 del requerimiento) — mismos que
+// PostulanteController::LIMITES_ARCHIVO. Antes había un único límite (5 MB,
+// PDF o imagen) para todo; la foto es la única que acepta imagen (sin WEBP,
+// el PDF del requerimiento solo menciona .jpg/.jpeg/.png).
+interface LimiteArchivo {
+  mb: number;
+  mimes: string[];
+  extensiones: string[];
+  aceptar: string; // para el atributo [accept] del <input type="file">
+}
 
-const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
-const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp'];
+const LIMITES_ARCHIVO: Record<TipoArchivo, LimiteArchivo> = {
+  foto_perfil: { mb: 2, mimes: ['image/jpeg', 'image/png'], extensiones: ['jpg', 'jpeg', 'png'], aceptar: 'image/jpeg,image/png' },
+  cedula: { mb: 3, mimes: ['application/pdf'], extensiones: ['pdf'], aceptar: 'application/pdf' },
+  libreta: { mb: 3, mimes: ['application/pdf'], extensiones: ['pdf'], aceptar: 'application/pdf' },
+  formacion: { mb: 5, mimes: ['application/pdf'], extensiones: ['pdf'], aceptar: 'application/pdf' },
+  experiencia: { mb: 5, mimes: ['application/pdf'], extensiones: ['pdf'], aceptar: 'application/pdf' },
+  conocimiento: { mb: 5, mimes: ['application/pdf'], extensiones: ['pdf'], aceptar: 'application/pdf' },
+};
 
-export const ACEPTAR_IMAGEN = 'image/jpeg,image/png,image/webp';
-export const ACEPTAR_DOCUMENTO = 'application/pdf,' + ACEPTAR_IMAGEN;
+export function aceptarPara(tipo: TipoArchivo): string {
+  return LIMITES_ARCHIVO[tipo].aceptar;
+}
 
-export function validarArchivo(archivo: File, soloImagen: boolean): string | null {
+export function esImagen(tipo: TipoArchivo): boolean {
+  return tipo === 'foto_perfil';
+}
+
+export function validarArchivo(archivo: File, tipo: TipoArchivo): string | null {
+  const limite = LIMITES_ARCHIVO[tipo];
   if (archivo.size === 0) {
     return 'El archivo está vacío.';
   }
-  if (archivo.size > TAMANO_MAXIMO_ARCHIVO) {
-    return `El archivo no puede superar los ${TAMANO_MAXIMO_ARCHIVO / 1024 / 1024} MB.`;
+  const maximoBytes = limite.mb * 1024 * 1024;
+  if (archivo.size > maximoBytes) {
+    return `El archivo no puede superar los ${limite.mb} MB.`;
   }
 
   const extension = archivo.name.split('.').pop()?.toLowerCase() ?? '';
-  const esImagen = TIPOS_IMAGEN.includes(archivo.type) || EXTENSIONES_IMAGEN.includes(extension);
-  const esPdf = archivo.type === 'application/pdf' || extension === 'pdf';
-
-  if (soloImagen && !esImagen) {
-    return 'La fotografía debe ser una imagen JPG, PNG o WEBP.';
-  }
-  if (!soloImagen && !esImagen && !esPdf) {
-    return 'El archivo debe ser un PDF o una imagen JPG, PNG o WEBP.';
+  const tipoValido = limite.mimes.includes(archivo.type) || limite.extensiones.includes(extension);
+  if (!tipoValido) {
+    return esImagen(tipo) ? 'La fotografía debe ser una imagen JPG o PNG.' : 'El archivo debe ser un PDF.';
   }
   return null;
 }

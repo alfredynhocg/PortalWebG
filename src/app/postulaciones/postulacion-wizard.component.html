@@ -22,6 +22,7 @@
         <button type="button" [class.activo]="paso() === 2" (click)="irAPaso(2)">2. Formación</button>
         <button type="button" [class.activo]="paso() === 3" (click)="irAPaso(3)">3. Experiencia</button>
         <button type="button" [class.activo]="paso() === 4" (click)="irAPaso(4)">4. Conocimientos</button>
+        <button type="button" [class.activo]="paso() === 5" (click)="irAPaso(5)">5. Documentos</button>
         <button type="button" [class.activo]="paso() === 6" (click)="irAPaso(6)">6. Confirmar</button>
       </nav>
 
@@ -35,8 +36,20 @@
 
           @if (r.formaciones.length) {
             <ul class="lista-bloques">
-              @for (f of r.formaciones; track f.id) {
-                <li>{{ f.nivel_estudios }} — {{ f.institucion }} ({{ f.fecha_inicio }} a {{ f.fecha_fin }})</li>
+              @for (f of r.formaciones; track f.id; let i = $index) {
+                <li>
+                  {{ f.nivel_estudios }} — {{ f.institucion }} ({{ f.fecha_inicio }} a {{ f.fecha_fin }})
+                  <span class="lista-bloques__acciones">
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === 0"
+                      (click)="moverFormacion(f.id, 'arriba')" title="Subir">↑</button>
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === r.formaciones.length - 1"
+                      (click)="moverFormacion(f.id, 'abajo')" title="Bajar">↓</button>
+                    <button type="button" class="btn-editar-bloque" [disabled]="guardandoBloque()"
+                      (click)="iniciarEdicionFormacion(f)" title="Editar este registro">Editar</button>
+                    <button type="button" class="btn-eliminar-bloque" [disabled]="eliminandoBloque()"
+                      (click)="eliminarFormacion(f.id)" title="Eliminar este registro">Eliminar</button>
+                  </span>
+                </li>
               }
             </ul>
           }
@@ -115,15 +128,19 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="archivo_f">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <label for="archivo_f">
+                {{ editandoFormacionId() !== null
+                  ? 'Documento adjunto (dejar vacío para conservar el ya cargado)'
+                  : 'Documento adjunto (solo PDF, máx. 5 MB) *' }}
+              </label>
               <input
                 id="archivo_f"
                 #archivoFormacion
                 type="file"
-                [accept]="aceptarDocumento"
+                [accept]="aceptarPara('formacion')"
                 (change)="seleccionarArchivo($event, 'formacion')"
               />
-              <input type="hidden" name="documento_url" required [(ngModel)]="nuevaFormacion.documento_url" />
+              <input type="hidden" name="documento_url" [required]="editandoFormacionId() === null" [(ngModel)]="nuevaFormacion.documento_url" />
               @switch (adjuntos().formacion.estado) {
                 @case ('subiendo') {
                   <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().formacion.nombre }}...</p>
@@ -132,6 +149,9 @@
                   <p class="adjunto adjunto--listo">
                     ✔ {{ adjuntos().formacion.nombre }} ({{ formatoTamano(adjuntos().formacion.tamano ?? 0) }})
                   </p>
+                }
+                @case ('cargado') {
+                  <p class="adjunto adjunto--listo">✔ Ya tiene un documento cargado. Elegí uno nuevo para reemplazarlo.</p>
                 }
                 @case ('error') {
                   <p class="adjunto adjunto--error" role="alert">{{ adjuntos().formacion.mensaje }}</p>
@@ -145,8 +165,13 @@
 
             <div class="wizard__acciones">
               <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().formacion.estado === 'subiendo'">
-                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar formación' }}
+                {{ guardandoBloque() ? 'Guardando...' : (editandoFormacionId() !== null ? 'Guardar cambios' : '+ Agregar formación') }}
               </button>
+              @if (editandoFormacionId() !== null) {
+                <button type="button" class="btn-cancelar-edicion" [disabled]="guardandoBloque()" (click)="cancelarEdicionFormacion()">
+                  Cancelar edición
+                </button>
+              }
               <button type="button" class="btn-primario" (click)="irAPaso(3)">Siguiente</button>
             </div>
           </form>
@@ -159,8 +184,20 @@
 
           @if (r.experiencias.length) {
             <ul class="lista-bloques">
-              @for (e of r.experiencias; track e.id) {
-                <li>{{ e.cargo }} — {{ e.institucion }} ({{ e.clasificacion }})</li>
+              @for (e of r.experiencias; track e.id; let i = $index) {
+                <li>
+                  {{ e.cargo }} — {{ e.institucion }} ({{ e.clasificacion }})
+                  <span class="lista-bloques__acciones">
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === 0"
+                      (click)="moverExperiencia(e.id, 'arriba')" title="Subir">↑</button>
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === r.experiencias.length - 1"
+                      (click)="moverExperiencia(e.id, 'abajo')" title="Bajar">↓</button>
+                    <button type="button" class="btn-editar-bloque" [disabled]="guardandoBloque()"
+                      (click)="iniciarEdicionExperiencia(e)" title="Editar este registro">Editar</button>
+                    <button type="button" class="btn-eliminar-bloque" [disabled]="eliminandoBloque()"
+                      (click)="eliminarExperiencia(e.id)" title="Eliminar este registro">Eliminar</button>
+                  </span>
+                </li>
               }
             </ul>
           }
@@ -224,15 +261,19 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="archivo_e">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <label for="archivo_e">
+                {{ editandoExperienciaId() !== null
+                  ? 'Documento adjunto (dejar vacío para conservar el ya cargado)'
+                  : 'Documento adjunto (solo PDF, máx. 5 MB) *' }}
+              </label>
               <input
                 id="archivo_e"
                 #archivoExperiencia
                 type="file"
-                [accept]="aceptarDocumento"
+                [accept]="aceptarPara('experiencia')"
                 (change)="seleccionarArchivo($event, 'experiencia')"
               />
-              <input type="hidden" name="documento_url" required [(ngModel)]="nuevaExperiencia.documento_url" />
+              <input type="hidden" name="documento_url" [required]="editandoExperienciaId() === null" [(ngModel)]="nuevaExperiencia.documento_url" />
               @switch (adjuntos().experiencia.estado) {
                 @case ('subiendo') {
                   <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().experiencia.nombre }}...</p>
@@ -241,6 +282,9 @@
                   <p class="adjunto adjunto--listo">
                     ✔ {{ adjuntos().experiencia.nombre }} ({{ formatoTamano(adjuntos().experiencia.tamano ?? 0) }})
                   </p>
+                }
+                @case ('cargado') {
+                  <p class="adjunto adjunto--listo">✔ Ya tiene un documento cargado. Elegí uno nuevo para reemplazarlo.</p>
                 }
                 @case ('error') {
                   <p class="adjunto adjunto--error" role="alert">{{ adjuntos().experiencia.mensaje }}</p>
@@ -254,8 +298,13 @@
 
             <div class="wizard__acciones">
               <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().experiencia.estado === 'subiendo'">
-                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar experiencia' }}
+                {{ guardandoBloque() ? 'Guardando...' : (editandoExperienciaId() !== null ? 'Guardar cambios' : '+ Agregar experiencia') }}
               </button>
+              @if (editandoExperienciaId() !== null) {
+                <button type="button" class="btn-cancelar-edicion" [disabled]="guardandoBloque()" (click)="cancelarEdicionExperiencia()">
+                  Cancelar edición
+                </button>
+              }
               <button type="button" class="btn-primario" (click)="irAPaso(4)">Siguiente</button>
             </div>
           </form>
@@ -268,8 +317,20 @@
 
           @if (r.conocimientos.length) {
             <ul class="lista-bloques">
-              @for (c of r.conocimientos; track c.id) {
-                <li>{{ c.nombre_curso }} — {{ c.institucion }} ({{ c.duracion_horas }} h)</li>
+              @for (c of r.conocimientos; track c.id; let i = $index) {
+                <li>
+                  {{ c.nombre_curso }} — {{ c.institucion }} ({{ c.duracion_horas }} h)
+                  <span class="lista-bloques__acciones">
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === 0"
+                      (click)="moverConocimiento(c.id, 'arriba')" title="Subir">↑</button>
+                    <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === r.conocimientos.length - 1"
+                      (click)="moverConocimiento(c.id, 'abajo')" title="Bajar">↓</button>
+                    <button type="button" class="btn-editar-bloque" [disabled]="guardandoBloque()"
+                      (click)="iniciarEdicionConocimiento(c)" title="Editar este registro">Editar</button>
+                    <button type="button" class="btn-eliminar-bloque" [disabled]="eliminandoBloque()"
+                      (click)="eliminarConocimiento(c.id)" title="Eliminar este registro">Eliminar</button>
+                  </span>
+                </li>
               }
             </ul>
           }
@@ -304,15 +365,19 @@
             </div>
 
             <div class="campo campo--ancho">
-              <label for="archivo_c">Documento adjunto (PDF o imagen, máx. 5 MB) *</label>
+              <label for="archivo_c">
+                {{ editandoConocimientoId() !== null
+                  ? 'Documento adjunto (dejar vacío para conservar el ya cargado)'
+                  : 'Documento adjunto (solo PDF, máx. 5 MB) *' }}
+              </label>
               <input
                 id="archivo_c"
                 #archivoConocimiento
                 type="file"
-                [accept]="aceptarDocumento"
+                [accept]="aceptarPara('conocimiento')"
                 (change)="seleccionarArchivo($event, 'conocimiento')"
               />
-              <input type="hidden" name="documento_url" required [(ngModel)]="nuevoConocimiento.documento_url" />
+              <input type="hidden" name="documento_url" [required]="editandoConocimientoId() === null" [(ngModel)]="nuevoConocimiento.documento_url" />
               @switch (adjuntos().conocimiento.estado) {
                 @case ('subiendo') {
                   <p class="adjunto adjunto--subiendo">Subiendo {{ adjuntos().conocimiento.nombre }}...</p>
@@ -321,6 +386,9 @@
                   <p class="adjunto adjunto--listo">
                     ✔ {{ adjuntos().conocimiento.nombre }} ({{ formatoTamano(adjuntos().conocimiento.tamano ?? 0) }})
                   </p>
+                }
+                @case ('cargado') {
+                  <p class="adjunto adjunto--listo">✔ Ya tiene un documento cargado. Elegí uno nuevo para reemplazarlo.</p>
                 }
                 @case ('error') {
                   <p class="adjunto adjunto--error" role="alert">{{ adjuntos().conocimiento.mensaje }}</p>
@@ -334,11 +402,79 @@
 
             <div class="wizard__acciones">
               <button type="submit" class="btn-secundario" [disabled]="guardandoBloque() || adjuntos().conocimiento.estado === 'subiendo'">
-                {{ guardandoBloque() ? 'Agregando...' : '+ Agregar conocimiento' }}
+                {{ guardandoBloque() ? 'Guardando...' : (editandoConocimientoId() !== null ? 'Guardar cambios' : '+ Agregar conocimiento') }}
               </button>
-              <button type="button" class="btn-primario" (click)="irAPaso(6)">Siguiente</button>
+              @if (editandoConocimientoId() !== null) {
+                <button type="button" class="btn-cancelar-edicion" [disabled]="guardandoBloque()" (click)="cancelarEdicionConocimiento()">
+                  Cancelar edición
+                </button>
+              }
+              <button type="button" class="btn-primario" (click)="irAPaso(5)">Siguiente</button>
             </div>
           </form>
+        </section>
+      }
+
+      @if (paso() === 5) {
+        <section class="wizard__seccion-paso">
+          <h2>Documentos</h2>
+          <p class="wizard__nota">
+            Verificá que todos los documentos obligatorios (*) estén cargados. Hacé clic en "Ver" para revisarlos
+            antes de continuar — se muestran acá mismo, sin abrir otra pestaña.
+          </p>
+
+          @if (cargandoChecklist()) {
+            <p class="mensaje-cargando">Cargando documentos...</p>
+          } @else if (checklist(); as c) {
+            <div class="documentos-layout">
+              <ul class="documentos-lista">
+                @for (item of c.documentos; track item.tipo + '-' + (item.bloque_id ?? '')) {
+                  <li [class.documentos-lista__item--pendiente]="item.obligatorio && !item.cargado">
+                    <span class="documentos-lista__estado" [class.documentos-lista__estado--ok]="item.cargado">
+                      {{ item.cargado ? '✔' : (item.obligatorio ? '✗' : '—') }}
+                    </span>
+                    <span class="documentos-lista__etiqueta">{{ item.etiqueta }}{{ item.obligatorio ? ' *' : '' }}</span>
+                    @if (item.cargado) {
+                      <button type="button" class="btn-ver-documento" (click)="verDocumentoChecklist(item)">Ver</button>
+                    } @else {
+                      <span class="documentos-lista__sin-cargar">{{ item.obligatorio ? 'Falta cargar' : 'No aplica' }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+
+              <div class="documentos-visor">
+                @if (cargandoVisor()) {
+                  <p class="mensaje-cargando">Cargando documento...</p>
+                } @else if (errorVisor()) {
+                  <p class="mensaje-error" role="alert">{{ errorVisor() }}</p>
+                } @else if (urlVisorPdf(); as urlPdf) {
+                  <iframe [src]="urlPdf" class="documentos-visor__pdf" title="Documento PDF"></iframe>
+                } @else if (urlVisorImagen(); as urlImg) {
+                  <img [src]="urlImg" class="documentos-visor__imagen" alt="Documento" />
+                } @else {
+                  <p class="documentos-visor__vacio">Elegí "Ver" en un documento de la lista para revisarlo acá.</p>
+                }
+              </div>
+            </div>
+
+            @if (!c.completo) {
+              <p class="mensaje-error" role="alert">
+                Faltan documentos obligatorios antes de poder continuar.
+              </p>
+            }
+
+            @if (error()) {
+              <p class="mensaje-error" role="alert">{{ error() }}</p>
+            }
+
+            <div class="wizard__acciones">
+              <button type="button" class="btn-secundario" (click)="irAPaso(4)">Atrás</button>
+              <button type="button" class="btn-primario" [disabled]="!c.completo" (click)="irAPaso(6)">
+                Validar y Siguiente
+              </button>
+            </div>
+          }
         </section>
       }
 
@@ -375,6 +511,7 @@
           </p>
 
           <div class="wizard__acciones">
+            <button type="button" class="btn-secundario" [disabled]="confirmando()" (click)="irAPaso(5)">Atrás</button>
             <button type="button" class="btn-primario" [disabled]="confirmando()" (click)="confirmar()">
               {{ confirmando() ? 'Enviando...' : 'Confirmar y Enviar' }}
             </button>

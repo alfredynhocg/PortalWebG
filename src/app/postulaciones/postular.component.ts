@@ -7,7 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { PostulacionesService } from './postulaciones.service';
 import { DatosPersonalesPostulante, TipoArchivoSimple } from './postulacion.model';
 import { mensajeError } from './errores';
-import { ACEPTAR_DOCUMENTO, ACEPTAR_IMAGEN, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
+import { aceptarPara, esImagen, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
 
 // Archivo elegido para uno de los 3 documentos del paso 1. Se sube recién
 // después de crear la postulación (el API lo asocia a ella).
@@ -45,13 +45,14 @@ export class PostularComponent implements OnInit, OnDestroy {
   // vez de volver a crearla (que respondería 409).
   readonly postulacionCreadaId = signal<string | null>(null);
 
-  readonly aceptarImagen = ACEPTAR_IMAGEN;
-  readonly aceptarDocumento = ACEPTAR_DOCUMENTO;
+  readonly aceptarPara = aceptarPara;
   readonly formatoTamano = formatoTamano;
-  readonly documentosConfig: { tipo: TipoArchivoSimple; etiqueta: string; soloImagen: boolean }[] = [
-    { tipo: 'foto_perfil', etiqueta: 'Fotografía de perfil', soloImagen: true },
-    { tipo: 'cedula', etiqueta: 'Cédula de identidad', soloImagen: false },
-    { tipo: 'libreta', etiqueta: 'Libreta militar', soloImagen: false },
+  // Límites y formatos de cada uno viven en archivos.ts (LIMITES_ARCHIVO), por
+  // tipo: foto ≤2MB JPG/PNG; cédula y libreta solo PDF ≤3MB (pág. 43-46).
+  readonly documentosConfig: { tipo: TipoArchivoSimple; etiqueta: string }[] = [
+    { tipo: 'foto_perfil', etiqueta: 'Fotografía de perfil' },
+    { tipo: 'cedula', etiqueta: 'Cédula de identidad' },
+    { tipo: 'libreta', etiqueta: 'Libreta militar' },
   ];
   readonly documentos = signal<Record<TipoArchivoSimple, DocumentoPostulante>>({
     foto_perfil: DOCUMENTO_VACIO,
@@ -133,7 +134,7 @@ export class PostularComponent implements OnInit, OnDestroy {
     this.documentos.update((actuales) => ({ ...actuales, [tipo]: { ...actuales[tipo], ...cambios } }));
   }
 
-  seleccionarDocumento(evento: Event, tipo: TipoArchivoSimple, soloImagen: boolean): void {
+  seleccionarDocumento(evento: Event, tipo: TipoArchivoSimple): void {
     const input = evento.target as HTMLInputElement;
     const archivo = input.files?.[0];
     this.liberarVista(this.documentos()[tipo]);
@@ -143,7 +144,7 @@ export class PostularComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const problema = validarArchivo(archivo, soloImagen);
+    const problema = validarArchivo(archivo, tipo);
     if (problema) {
       input.value = '';
       this.documentos.update((actuales) => ({ ...actuales, [tipo]: { archivo: null, estado: 'error', mensaje: problema } }));
@@ -152,7 +153,7 @@ export class PostularComponent implements OnInit, OnDestroy {
 
     this.documentos.update((actuales) => ({
       ...actuales,
-      [tipo]: { archivo, estado: 'pendiente', vista: soloImagen ? URL.createObjectURL(archivo) : undefined },
+      [tipo]: { archivo, estado: 'pendiente', vista: esImagen(tipo) ? URL.createObjectURL(archivo) : undefined },
     }));
 
     void verificarLectura(archivo).then((ilegible) => {

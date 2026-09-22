@@ -210,8 +210,7 @@
         <fieldset class="wizard__seccion">
           <legend>Documentos (opcionales)</legend>
           <p class="wizard__nota">
-            Adjunta los archivos originales. Formatos: PDF o imagen JPG, PNG, WEBP (la fotografía solo imagen). Máximo
-            5 MB por archivo.
+            Fotografía de perfil: imagen JPG o PNG, máximo 2 MB. Cédula y libreta militar: solo PDF, máximo 3 MB.
           </p>
 
           @for (d of documentosConfig; track d.tipo) {
@@ -222,9 +221,9 @@
                 #entrada
                 [id]="'doc_' + d.tipo"
                 type="file"
-                [accept]="d.soloImagen ? aceptarImagen : aceptarDocumento"
+                [accept]="aceptarPara(d.tipo)"
                 [disabled]="enviando() || doc.estado === 'listo'"
-                (change)="seleccionarDocumento($event, d.tipo, d.soloImagen)"
+                (change)="seleccionarDocumento($event, d.tipo)"
               />
 
               @if (doc.vista) {

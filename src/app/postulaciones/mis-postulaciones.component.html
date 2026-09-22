@@ -1,0 +1,99 @@
+<main class="contenido">
+  <article class="panel">
+    <h1>Mis postulaciones</h1>
+    <p class="panel__nota">
+      Ingresá tu número de CI para ver el estado de tus postulaciones. El complemento es opcional: solo hace falta
+      si tu CI se repite con el de otra persona.
+    </p>
+
+    <form #f="ngForm" (ngSubmit)="buscar(f)" novalidate class="form-busqueda">
+      <div class="campo">
+        <label for="ci">N° de CI *</label>
+        <input id="ci" name="ci" type="text" maxlength="20" required [(ngModel)]="ci" />
+      </div>
+      <div class="campo campo--corto">
+        <label for="complemento">Complemento</label>
+        <input
+          id="complemento"
+          name="complemento"
+          type="text"
+          maxlength="3"
+          pattern="[0-9A-Za-z]{1,3}"
+          title="1 a 3 letras o números (p. ej. 1A)"
+          [(ngModel)]="complemento"
+        />
+      </div>
+      <button type="submit" class="btn-primario" [disabled]="buscando()">
+        {{ buscando() ? 'Buscando...' : 'Buscar' }}
+      </button>
+    </form>
+
+    @if (error()) {
+      <p class="mensaje-error" role="alert">{{ error() }}</p>
+    }
+
+    @if (buscando()) {
+      <p class="mensaje-cargando">Buscando tus postulaciones...</p>
+    } @else if (resultados(); as filas) {
+      @if (filas.length === 0) {
+        <p class="mensaje-vacio">No se encontraron postulaciones con ese CI.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="tabla-postulaciones">
+            <thead>
+              <tr>
+                <th>Convocatoria</th>
+                <th>Cargo</th>
+                <th>Área solicitante</th>
+                <th>Ubicación</th>
+                <th>Fecha límite</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of filas; track item.id) {
+                <tr>
+                  <td>{{ item.convocatoria }}</td>
+                  <td>{{ item.cargo || '-' }}</td>
+                  <td>{{ item.area_solicitante || '-' }}</td>
+                  <td>{{ item.ubicacion || '-' }}</td>
+                  <td>{{ item.fecha_limite_postulacion || '-' }}</td>
+                  <td>
+                    <span class="badge-estado" [class]="'badge-estado--' + item.estado.toLowerCase()">
+                      {{ etiquetaEstado(item.estado) }}
+                    </span>
+                    @if (!item.convocatoria_activa) {
+                      <span class="nota-inactiva">(convocatoria cerrada)</span>
+                    }
+                  </td>
+                  <td class="acciones">
+                    <button type="button" class="btn-enlace" (click)="continuar(item)">
+                      {{ item.editable ? 'Continuar' : 'Ver' }}
+                    </button>
+                    @if (item.puede_quitar) {
+                      @if (confirmandoQuitarId() === item.id) {
+                        <span class="confirmar-quitar">
+                          ¿Seguro?
+                          <button type="button" class="btn-enlace btn-enlace--peligro" [disabled]="quitandoId() === item.id"
+                            (click)="confirmarQuitar(item)">
+                            {{ quitandoId() === item.id ? 'Quitando...' : 'Sí, quitar' }}
+                          </button>
+                          <button type="button" class="btn-enlace" (click)="cancelarQuitar()">Cancelar</button>
+                        </span>
+                      } @else {
+                        <button type="button" class="btn-enlace btn-enlace--peligro" (click)="pedirConfirmacionQuitar(item)">
+                          Quitar
+                        </button>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </article>
+</main>

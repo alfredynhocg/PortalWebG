@@ -1,0 +1,20 @@
+<div class="layout">
+  <nav class="menu-lateral" aria-label="Menú del postulante">
+    <div class="menu-lateral__marca">Gestora</div>
+    <ul>
+      <li><a routerLink="/" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }">Inicio</a></li>
+      <li><a routerLink="/">Nuevo registro</a></li>
+      <li>
+        <a routerLink="/postulaciones/mis-postulaciones" routerLinkActive="activo">Mis postulaciones</a>
+      </li>
+      <li><a routerLink="/">Convocatorias vigentes</a></li>
+      <li>
+        <span class="menu-lateral__deshabilitado" title="Próximamente">Notificaciones</span>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="layout__contenido">
+    <router-outlet />
+  </div>
+</div>
