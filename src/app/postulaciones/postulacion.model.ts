@@ -157,12 +157,32 @@ export interface Conocimiento extends ConocimientoInput {
   postulacion_id: string;
 }
 
+// Set completo (no solo un resumen pese al nombre): el backend ahora devuelve
+// todos los campos del paso 1, para poder prellenar el formulario de edición.
 export interface PostulanteResumen {
   id: string;
+  tipo_documento?: string | null;
   ci: string;
+  complemento?: string | null;
+  expedido?: string | null;
   nombres: string;
   apellido_paterno: string;
-  apellido_materno?: string;
+  apellido_materno?: string | null;
+  apellido_casada?: string | null;
+  utilizar_apellido_casada?: string | null;
+  fecha_nacimiento?: string | null;
+  estado_civil?: string | null;
+  genero?: string | null;
+  lugar_nacimiento?: string | null;
+  departamento?: string | null;
+  localidad?: string | null;
+  direccion_domicilio?: string | null;
+  telefono_domicilio?: string | null;
+  celular?: string | null;
+  email?: string | null;
+  nro_libreta_militar?: string | null;
+  grupo_sanguineo?: string | null;
+  contacto_emergencia?: string | null;
 }
 
 // Respuesta de GET .../postulaciones/{id} (PostulanteController::resumen()).

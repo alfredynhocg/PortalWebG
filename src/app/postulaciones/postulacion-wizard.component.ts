@@ -11,6 +11,7 @@ import {
   ChecklistDocumentos,
   Conocimiento,
   ConocimientoInput,
+  DatosPersonalesPostulante,
   DireccionOrden,
   DocumentoChecklistItem,
   Experiencia,
@@ -22,7 +23,7 @@ import {
   TipoArchivoBloque,
 } from './postulacion.model';
 
-type Paso = 2 | 3 | 4 | 5 | 6;
+type Paso = 1 | 2 | 3 | 4 | 5 | 6;
 
 // Estado del archivo adjunto de un bloque (formación, experiencia, curso). El
 // archivo se sube apenas se elige; la ruta que devuelve el API queda en el
@@ -99,6 +100,66 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   nuevaExperiencia: ExperienciaInput = this.experienciaVacia();
   nuevoConocimiento: ConocimientoInput = this.conocimientoVacio();
 
+  // Paso 1 — editar datos personales de una postulación ya creada (pág. 12:
+  // "Permitir registrar/actualizar datos personales"). Se prellena con lo que
+  // ya devuelve resumen() al entrar; foto/cédula/libreta se manejan aparte, en
+  // el paso 5, no acá, para no duplicar la lógica de subida de archivos.
+  readonly guardandoDatos = signal(false);
+  datosPersonales: DatosPersonalesPostulante = this.datosPersonalesVacios();
+
+  readonly departamentos = [
+    { valor: 'LA_PAZ', etiqueta: 'LA PAZ' },
+    { valor: 'COCHABAMBA', etiqueta: 'COCHABAMBA' },
+    { valor: 'SANTA_CRUZ', etiqueta: 'SANTA CRUZ' },
+    { valor: 'ORURO', etiqueta: 'ORURO' },
+    { valor: 'POTOSI', etiqueta: 'POTOSÍ' },
+    { valor: 'CHUQUISACA', etiqueta: 'CHUQUISACA' },
+    { valor: 'TARIJA', etiqueta: 'TARIJA' },
+    { valor: 'BENI', etiqueta: 'BENI' },
+    { valor: 'PANDO', etiqueta: 'PANDO' },
+  ];
+
+  readonly expedidos = [
+    { valor: 'LP', etiqueta: 'LA PAZ' },
+    { valor: 'CB', etiqueta: 'COCHABAMBA' },
+    { valor: 'SC', etiqueta: 'SANTA CRUZ' },
+    { valor: 'OR', etiqueta: 'ORURO' },
+    { valor: 'PT', etiqueta: 'POTOSÍ' },
+    { valor: 'CH', etiqueta: 'CHUQUISACA' },
+    { valor: 'TJ', etiqueta: 'TARIJA' },
+    { valor: 'BE', etiqueta: 'BENI' },
+    { valor: 'PA', etiqueta: 'PANDO' },
+  ];
+
+  readonly estadosCiviles = ['SOLTERO', 'CASADO', 'DIVORCIADO', 'VIUDO', 'CONCUBINO'];
+
+  private datosPersonalesVacios(): DatosPersonalesPostulante {
+    return {
+      ci: '',
+      tipo_documento: 'CI',
+      complemento: '',
+      nombres: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      apellido_casada: '',
+      utilizar_apellido_casada: 'NO',
+      fecha_nacimiento: '',
+      expedido: '',
+      estado_civil: '',
+      genero: '',
+      lugar_nacimiento: '',
+      departamento: '',
+      localidad: '',
+      direccion_domicilio: '',
+      telefono_domicilio: '',
+      celular: '',
+      email: '',
+      nro_libreta_militar: '',
+      grupo_sanguineo: '',
+      contacto_emergencia: '',
+    };
+  }
+
   ngOnInit(): void {
     // El id es el código de acceso (UUID) del paso 1; un id numérico (enlaces
     // viejos) no existe para el API (404), así que ni se intenta.
@@ -123,6 +184,31 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
     this.postulacionesService.resumen(this.postulacionId).subscribe({
       next: (respuesta) => {
         this.resumen.set(respuesta.data);
+        const p = respuesta.data.postulante;
+        this.datosPersonales = {
+          ci: p.ci ?? '',
+          tipo_documento: p.tipo_documento ?? 'CI',
+          complemento: p.complemento ?? '',
+          nombres: p.nombres ?? '',
+          apellido_paterno: p.apellido_paterno ?? '',
+          apellido_materno: p.apellido_materno ?? '',
+          apellido_casada: p.apellido_casada ?? '',
+          utilizar_apellido_casada: p.utilizar_apellido_casada ?? 'NO',
+          fecha_nacimiento: p.fecha_nacimiento ?? '',
+          expedido: p.expedido ?? '',
+          estado_civil: p.estado_civil ?? '',
+          genero: p.genero ?? '',
+          lugar_nacimiento: p.lugar_nacimiento ?? '',
+          departamento: p.departamento ?? '',
+          localidad: p.localidad ?? '',
+          direccion_domicilio: p.direccion_domicilio ?? '',
+          telefono_domicilio: p.telefono_domicilio ?? '',
+          celular: p.celular ?? '',
+          email: p.email ?? '',
+          nro_libreta_militar: p.nro_libreta_militar ?? '',
+          grupo_sanguineo: p.grupo_sanguineo ?? '',
+          contacto_emergencia: p.contacto_emergencia ?? '',
+        };
         // Si ya se envió (ENVIADO/EN_EVALUACION/CONCLUIDO), no es editable:
         // PostulanteController::postulacionEditable() solo permite cambios en
         // ELABORADO. Se detecta acá para avisar de entrada en vez de dejar
@@ -148,11 +234,36 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   irAPaso(paso: Paso): void {
     this.paso.set(paso);
     this.error.set(null);
+    this.datosGuardados.set(false);
     if (paso === 5) {
       this.cargarChecklist();
     } else {
       this.limpiarVisor();
     }
+  }
+
+  readonly datosGuardados = signal(false);
+
+  guardarDatos(formulario: NgForm): void {
+    if (formulario.invalid) {
+      formulario.form.markAllAsTouched();
+      this.error.set(this.MENSAJE_CAMPOS_OBLIGATORIOS);
+      return;
+    }
+    this.error.set(null);
+    this.datosGuardados.set(false);
+    this.guardandoDatos.set(true);
+    this.postulacionesService.actualizarDatos(this.postulacionId, this.datosPersonales).subscribe({
+      next: (respuesta) => {
+        this.resumen.set(respuesta.data);
+        this.guardandoDatos.set(false);
+        this.datosGuardados.set(true);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardandoDatos.set(false);
+        this.error.set(mensajeError(err, 'No se pudieron guardar los datos personales.'));
+      },
+    });
   }
 
   private cargarChecklist(): void {

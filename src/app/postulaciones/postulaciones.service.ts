@@ -85,6 +85,17 @@ export class PostulacionesService {
     );
   }
 
+  // Paso 1 (edición) — PostulanteController::actualizarDatos(). A diferencia
+  // de postular(), esto actualiza una postulación ya creada; solo funciona
+  // mientras esté en ELABORADO (422 si ya fue enviada).
+  actualizarDatos(postulacionId: string, datos: DatosPersonalesPostulante): Observable<PostulacionResumenResponse> {
+    return this.http.put<PostulacionResumenResponse>(
+      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/datos`,
+      datos,
+      { headers: this.headers() }
+    );
+  }
+
   // Paso 2 — PostulanteController::agregarFormacion().
   agregarFormacion(postulacionId: string, datos: FormacionInput): Observable<BloqueResponse<Formacion>> {
     return this.http.post<BloqueResponse<Formacion>>(

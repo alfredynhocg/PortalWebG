@@ -19,6 +19,7 @@
       <p class="wizard__paso">Paso {{ paso() }} de 6 — {{ codigo }}</p>
 
       <nav class="wizard__pasos">
+        <button type="button" [class.activo]="paso() === 1" (click)="irAPaso(1)">1. Datos personales</button>
         <button type="button" [class.activo]="paso() === 2" (click)="irAPaso(2)">2. Formación</button>
         <button type="button" [class.activo]="paso() === 3" (click)="irAPaso(3)">3. Experiencia</button>
         <button type="button" [class.activo]="paso() === 4" (click)="irAPaso(4)">4. Conocimientos</button>
@@ -28,6 +29,233 @@
 
       @if (error() && paso() === 6) {
         <p class="mensaje-error" role="alert">{{ error() }}</p>
+      }
+
+      @if (paso() === 1) {
+        <section class="wizard__seccion-paso">
+          <h2>Datos Personales</h2>
+          <p class="wizard__nota">
+            Corregí tus datos si te equivocaste al registrarte. La foto de perfil, la cédula y la libreta militar se
+            manejan desde el paso 5 (Documentos).
+          </p>
+
+          <form #datosForm="ngForm" (ngSubmit)="guardarDatos(datosForm)" novalidate>
+            <fieldset class="wizard__seccion">
+              <legend>Identificación</legend>
+
+              <div class="campo">
+                <label for="e_tipo_documento">Tipo de documento</label>
+                <select id="e_tipo_documento" name="tipo_documento" [(ngModel)]="datosPersonales.tipo_documento">
+                  <option value="CI">CÉDULA DE IDENTIDAD</option>
+                  <option value="PASAPORTE">PASAPORTE</option>
+                  <option value="CARNET_EXTRANJERIA">CARNET DE EXTRANJERÍA</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="e_ci">N° de Documento *</label>
+                <input id="e_ci" name="ci" type="text" maxlength="20" required [(ngModel)]="datosPersonales.ci" />
+              </div>
+
+              <div class="campo">
+                <label for="e_complemento">Complemento</label>
+                <input
+                  id="e_complemento"
+                  name="complemento"
+                  type="text"
+                  maxlength="3"
+                  pattern="[0-9A-Za-z]{1,3}"
+                  title="1 a 3 letras o números (p. ej. 1A)"
+                  [(ngModel)]="datosPersonales.complemento"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_nombres">Nombres *</label>
+                <input id="e_nombres" name="nombres" type="text" maxlength="150" required [(ngModel)]="datosPersonales.nombres" />
+              </div>
+
+              <div class="campo">
+                <label for="e_apellido_paterno">Apellido Paterno *</label>
+                <input
+                  id="e_apellido_paterno"
+                  name="apellido_paterno"
+                  type="text"
+                  maxlength="100"
+                  required
+                  [(ngModel)]="datosPersonales.apellido_paterno"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_apellido_materno">Apellido Materno</label>
+                <input
+                  id="e_apellido_materno"
+                  name="apellido_materno"
+                  type="text"
+                  maxlength="100"
+                  [(ngModel)]="datosPersonales.apellido_materno"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_fecha_nacimiento">Fecha de nacimiento *</label>
+                <input
+                  id="e_fecha_nacimiento"
+                  name="fecha_nacimiento"
+                  type="date"
+                  required
+                  [(ngModel)]="datosPersonales.fecha_nacimiento"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_expedido">Expedido *</label>
+                <select id="e_expedido" name="expedido" required [(ngModel)]="datosPersonales.expedido">
+                  <option value="" disabled>Seleccionar</option>
+                  @for (d of expedidos; track d.valor) {
+                    <option [value]="d.valor">{{ d.etiqueta }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="e_estado_civil">Estado civil *</label>
+                <select id="e_estado_civil" name="estado_civil" required [(ngModel)]="datosPersonales.estado_civil">
+                  <option value="" disabled>Seleccionar</option>
+                  @for (ec of estadosCiviles; track ec) {
+                    <option [value]="ec">{{ ec }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="e_genero">Género *</label>
+                <select id="e_genero" name="genero" required [(ngModel)]="datosPersonales.genero">
+                  <option value="" disabled>Seleccionar</option>
+                  <option value="MASCULINO">MASCULINO</option>
+                  <option value="FEMENINO">FEMENINO</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="e_lugar_nacimiento">Lugar de nacimiento *</label>
+                <input
+                  id="e_lugar_nacimiento"
+                  name="lugar_nacimiento"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [(ngModel)]="datosPersonales.lugar_nacimiento"
+                />
+              </div>
+            </fieldset>
+
+            <fieldset class="wizard__seccion">
+              <legend>Datos de Ubicación</legend>
+
+              <div class="campo">
+                <label for="e_departamento">Departamento *</label>
+                <select id="e_departamento" name="departamento" required [(ngModel)]="datosPersonales.departamento">
+                  <option value="" disabled>Seleccionar</option>
+                  @for (d of departamentos; track d.valor) {
+                    <option [value]="d.valor">{{ d.etiqueta }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="campo">
+                <label for="e_localidad">Localidad *</label>
+                <input id="e_localidad" name="localidad" type="text" maxlength="150" required [(ngModel)]="datosPersonales.localidad" />
+              </div>
+
+              <div class="campo campo--ancho">
+                <label for="e_direccion_domicilio">Dirección domicilio *</label>
+                <input
+                  id="e_direccion_domicilio"
+                  name="direccion_domicilio"
+                  type="text"
+                  maxlength="255"
+                  required
+                  [(ngModel)]="datosPersonales.direccion_domicilio"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_telefono_domicilio">Teléfono</label>
+                <input
+                  id="e_telefono_domicilio"
+                  name="telefono_domicilio"
+                  type="text"
+                  maxlength="15"
+                  [(ngModel)]="datosPersonales.telefono_domicilio"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_celular">Celular *</label>
+                <input id="e_celular" name="celular" type="text" maxlength="15" required [(ngModel)]="datosPersonales.celular" />
+              </div>
+
+              <div class="campo">
+                <label for="e_email">Correo electrónico *</label>
+                <input id="e_email" name="email" type="email" maxlength="150" required [(ngModel)]="datosPersonales.email" />
+              </div>
+            </fieldset>
+
+            <fieldset class="wizard__seccion">
+              <legend>Datos Adicionales</legend>
+
+              <div class="campo">
+                <label for="e_nro_libreta_militar">N° Libreta Militar</label>
+                <input
+                  id="e_nro_libreta_militar"
+                  name="nro_libreta_militar"
+                  type="text"
+                  maxlength="30"
+                  [(ngModel)]="datosPersonales.nro_libreta_militar"
+                />
+              </div>
+
+              <div class="campo">
+                <label for="e_grupo_sanguineo">Grupo Sanguíneo</label>
+                <input
+                  id="e_grupo_sanguineo"
+                  name="grupo_sanguineo"
+                  type="text"
+                  maxlength="5"
+                  [(ngModel)]="datosPersonales.grupo_sanguineo"
+                />
+              </div>
+
+              <div class="campo campo--ancho">
+                <label for="e_contacto_emergencia">Contacto de emergencia *</label>
+                <input
+                  id="e_contacto_emergencia"
+                  name="contacto_emergencia"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [(ngModel)]="datosPersonales.contacto_emergencia"
+                />
+              </div>
+            </fieldset>
+
+            @if (error()) {
+              <p class="mensaje-error" role="alert">{{ error() }}</p>
+            }
+            @if (datosGuardados()) {
+              <p class="adjunto adjunto--listo">✔ Datos actualizados.</p>
+            }
+
+            <div class="wizard__acciones">
+              <button type="submit" class="btn-primario" [disabled]="guardandoDatos()">
+                {{ guardandoDatos() ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+              <button type="button" class="btn-primario" (click)="irAPaso(2)">Siguiente</button>
+            </div>
+          </form>
+        </section>
       }
 
       @if (paso() === 2) {
