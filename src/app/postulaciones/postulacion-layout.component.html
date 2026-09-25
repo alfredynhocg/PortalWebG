@@ -9,7 +9,12 @@
       </li>
       <li><a routerLink="/">Convocatorias vigentes</a></li>
       <li>
-        <span class="menu-lateral__deshabilitado" title="Próximamente">Notificaciones</span>
+        <a routerLink="/postulaciones/notificaciones" routerLinkActive="activo" class="menu-lateral__con-contador">
+          Notificaciones
+          @if (notificaciones.noLeidas() > 0) {
+            <span class="contador" [attr.aria-label]="notificaciones.noLeidas() + ' sin leer'">{{ notificaciones.noLeidas() }}</span>
+          }
+        </a>
       </li>
     </ul>
   </nav>

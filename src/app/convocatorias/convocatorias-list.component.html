@@ -20,7 +20,7 @@
               <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2" />
               <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
             </svg>
-            <span class="cd-usuario__nombre">{{ auth.session().user?.['nombres'] ?? auth.session().user?.['nombre'] ?? 'Ciudadano' }}</span>
+            <a class="cd-usuario__nombre" routerLink="/mi-perfil" title="Mi perfil">{{ auth.nombreVisible() }}</a>
             <button type="button" class="cd-usuario__salir" (click)="auth.logout()">Cerrar sesión</button>
           </div>
         } @else {
@@ -42,6 +42,12 @@
 </section>
 
 <main class="contenido">
+  @if (registroRecienCompletado()) {
+    <div class="aviso-registro" role="status">
+      <span>✔ <strong>¡Registro completo!</strong> Elige una convocatoria, entra al detalle y presiona <strong>Postularme</strong>: tus datos ya estarán cargados.</span>
+      <button type="button" class="aviso-registro__cerrar" (click)="cerrarAvisoRegistro()" aria-label="Cerrar aviso">×</button>
+    </div>
+  }
   <h2 class="titulo-seccion">Convocatorias vigentes ({{ totalRegistros() }})</h2>
 
   <div class="buscador">

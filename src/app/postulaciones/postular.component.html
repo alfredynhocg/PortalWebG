@@ -5,13 +5,19 @@
       <h1>Formulario de Postulación</h1>
       <p class="wizard__paso">Paso 1 de 6 — Datos personales</p>
 
+      @if (cargandoPerfil()) {
+        <p class="wizard__paso">Cargando tus datos...</p>
+      } @else {
+        <p class="nota-bloqueados">🔒 Tus datos se completaron desde tu perfil. Los campos con candado vienen de <strong>Ciudadanía Digital</strong> y no se pueden modificar.</p>
+      }
+
       <form #f="ngForm" (ngSubmit)="enviar(f)" novalidate>
         <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
           <legend>Datos Personales</legend>
 
           <div class="campo">
-            <label for="tipo_documento">Tipo de documento</label>
-            <select id="tipo_documento" name="tipo_documento" [(ngModel)]="datos.tipo_documento">
+            <label for="tipo_documento">Tipo de documento@if (bloqueado('tipo_documento')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <select id="tipo_documento" [disabled]="bloqueado('tipo_documento')" name="tipo_documento" [(ngModel)]="datos.tipo_documento">
               <option value="CI">CÉDULA DE IDENTIDAD</option>
               <option value="PASAPORTE">PASAPORTE</option>
               <option value="CARNET_EXTRANJERIA">CARNET DE EXTRANJERÍA</option>
@@ -19,14 +25,14 @@
           </div>
 
           <div class="campo">
-            <label for="ci">N° de Documento *</label>
-            <input id="ci" name="ci" type="text" maxlength="20" required [(ngModel)]="datos.ci" />
+            <label for="ci">N° de Documento *@if (bloqueado('ci')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <input id="ci" [readonly]="bloqueado('ci')" name="ci" type="text" maxlength="20" required [(ngModel)]="datos.ci" />
           </div>
 
           <div class="campo">
-            <label for="complemento">Complemento</label>
+            <label for="complemento">Complemento@if (bloqueado('complemento')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="complemento"
+              id="complemento" [readonly]="bloqueado('complemento')"
               name="complemento"
               type="text"
               maxlength="3"
@@ -37,14 +43,14 @@
           </div>
 
           <div class="campo">
-            <label for="nombres">Nombres *</label>
-            <input id="nombres" name="nombres" type="text" maxlength="150" required [(ngModel)]="datos.nombres" />
+            <label for="nombres">Nombres *@if (bloqueado('nombres')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <input id="nombres" [readonly]="bloqueado('nombres')" name="nombres" type="text" maxlength="150" required [(ngModel)]="datos.nombres" />
           </div>
 
           <div class="campo">
-            <label for="apellido_paterno">Apellido Paterno *</label>
+            <label for="apellido_paterno">Apellido Paterno *@if (bloqueado('apellido_paterno')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="apellido_paterno"
+              id="apellido_paterno" [readonly]="bloqueado('apellido_paterno')"
               name="apellido_paterno"
               type="text"
               maxlength="100"
@@ -54,9 +60,9 @@
           </div>
 
           <div class="campo">
-            <label for="apellido_materno">Apellido Materno</label>
+            <label for="apellido_materno">Apellido Materno@if (bloqueado('apellido_materno')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="apellido_materno"
+              id="apellido_materno" [readonly]="bloqueado('apellido_materno')"
               name="apellido_materno"
               type="text"
               maxlength="100"
@@ -65,9 +71,9 @@
           </div>
 
           <div class="campo">
-            <label for="fecha_nacimiento">Fecha de nacimiento *</label>
+            <label for="fecha_nacimiento">Fecha de nacimiento *@if (bloqueado('fecha_nacimiento')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="fecha_nacimiento"
+              id="fecha_nacimiento" [readonly]="bloqueado('fecha_nacimiento')"
               name="fecha_nacimiento"
               type="date"
               required
@@ -76,8 +82,8 @@
           </div>
 
           <div class="campo">
-            <label for="expedido">Expedido *</label>
-            <select id="expedido" name="expedido" required [(ngModel)]="datos.expedido">
+            <label for="expedido">Expedido *@if (bloqueado('expedido')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <select id="expedido" [disabled]="bloqueado('expedido')" name="expedido" required [(ngModel)]="datos.expedido">
               <option value="" disabled selected>Seleccionar</option>
               @for (d of expedidos; track d.valor) {
                 <option [value]="d.valor">{{ d.etiqueta }}</option>
@@ -86,8 +92,8 @@
           </div>
 
           <div class="campo">
-            <label for="estado_civil">Estado civil *</label>
-            <select id="estado_civil" name="estado_civil" required [(ngModel)]="datos.estado_civil">
+            <label for="estado_civil">Estado civil *@if (bloqueado('estado_civil')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <select id="estado_civil" [disabled]="bloqueado('estado_civil')" name="estado_civil" required [(ngModel)]="datos.estado_civil">
               <option value="" disabled selected>Seleccionar</option>
               @for (ec of estadosCiviles; track ec) {
                 <option [value]="ec">{{ ec }}</option>
@@ -96,8 +102,8 @@
           </div>
 
           <div class="campo">
-            <label for="genero">Género *</label>
-            <select id="genero" name="genero" required [(ngModel)]="datos.genero">
+            <label for="genero">Género *@if (bloqueado('genero')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <select id="genero" [disabled]="bloqueado('genero')" name="genero" required [(ngModel)]="datos.genero">
               <option value="" disabled selected>Seleccionar</option>
               <option value="MASCULINO">MASCULINO</option>
               <option value="FEMENINO">FEMENINO</option>
@@ -105,9 +111,9 @@
           </div>
 
           <div class="campo">
-            <label for="lugar_nacimiento">Lugar de nacimiento *</label>
+            <label for="lugar_nacimiento">Lugar de nacimiento *@if (bloqueado('lugar_nacimiento')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="lugar_nacimiento"
+              id="lugar_nacimiento" [readonly]="bloqueado('lugar_nacimiento')"
               name="lugar_nacimiento"
               type="text"
               maxlength="150"
@@ -121,8 +127,8 @@
           <legend>Datos de Ubicación</legend>
 
           <div class="campo">
-            <label for="departamento">Departamento *</label>
-            <select id="departamento" name="departamento" required [(ngModel)]="datos.departamento">
+            <label for="departamento">Departamento *@if (bloqueado('departamento')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <select id="departamento" [disabled]="bloqueado('departamento')" name="departamento" required [(ngModel)]="datos.departamento">
               <option value="" disabled selected>Seleccionar</option>
               @for (d of departamentos; track d.valor) {
                 <option [value]="d.valor">{{ d.etiqueta }}</option>
@@ -131,14 +137,14 @@
           </div>
 
           <div class="campo">
-            <label for="localidad">Localidad *</label>
-            <input id="localidad" name="localidad" type="text" maxlength="150" required [(ngModel)]="datos.localidad" />
+            <label for="localidad">Localidad *@if (bloqueado('localidad')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <input id="localidad" [readonly]="bloqueado('localidad')" name="localidad" type="text" maxlength="150" required [(ngModel)]="datos.localidad" />
           </div>
 
           <div class="campo campo--ancho">
-            <label for="direccion_domicilio">Dirección domicilio *</label>
+            <label for="direccion_domicilio">Dirección domicilio *@if (bloqueado('direccion_domicilio')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="direccion_domicilio"
+              id="direccion_domicilio" [readonly]="bloqueado('direccion_domicilio')"
               name="direccion_domicilio"
               type="text"
               maxlength="255"
@@ -148,9 +154,9 @@
           </div>
 
           <div class="campo">
-            <label for="telefono_domicilio">Teléfono</label>
+            <label for="telefono_domicilio">Teléfono@if (bloqueado('telefono_domicilio')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="telefono_domicilio"
+              id="telefono_domicilio" [readonly]="bloqueado('telefono_domicilio')"
               name="telefono_domicilio"
               type="text"
               maxlength="15"
@@ -159,13 +165,13 @@
           </div>
 
           <div class="campo">
-            <label for="celular">Celular *</label>
-            <input id="celular" name="celular" type="text" maxlength="15" required [(ngModel)]="datos.celular" />
+            <label for="celular">Celular *@if (bloqueado('celular')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <input id="celular" [readonly]="bloqueado('celular')" name="celular" type="text" maxlength="15" required [(ngModel)]="datos.celular" />
           </div>
 
           <div class="campo">
-            <label for="email">Correo electrónico *</label>
-            <input id="email" name="email" type="email" maxlength="150" required [(ngModel)]="datos.email" />
+            <label for="email">Correo electrónico *@if (bloqueado('email')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
+            <input id="email" [readonly]="bloqueado('email')" name="email" type="email" maxlength="150" required [(ngModel)]="datos.email" />
           </div>
         </fieldset>
 
@@ -173,9 +179,9 @@
           <legend>Datos Adicionales</legend>
 
           <div class="campo">
-            <label for="nro_libreta_militar">N° Libreta Militar</label>
+            <label for="nro_libreta_militar">N° Libreta Militar@if (bloqueado('nro_libreta_militar')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="nro_libreta_militar"
+              id="nro_libreta_militar" [readonly]="bloqueado('nro_libreta_militar')"
               name="nro_libreta_militar"
               type="text"
               maxlength="30"
@@ -184,9 +190,9 @@
           </div>
 
           <div class="campo">
-            <label for="grupo_sanguineo">Grupo Sanguíneo</label>
+            <label for="grupo_sanguineo">Grupo Sanguíneo@if (bloqueado('grupo_sanguineo')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="grupo_sanguineo"
+              id="grupo_sanguineo" [readonly]="bloqueado('grupo_sanguineo')"
               name="grupo_sanguineo"
               type="text"
               maxlength="5"
@@ -195,9 +201,9 @@
           </div>
 
           <div class="campo campo--ancho">
-            <label for="contacto_emergencia">Contacto de emergencia *</label>
+            <label for="contacto_emergencia">Contacto de emergencia *@if (bloqueado('contacto_emergencia')) {<span class='candado' title='Dato verificado por Ciudadanía Digital'> 🔒</span>}</label>
             <input
-              id="contacto_emergencia"
+              id="contacto_emergencia" [readonly]="bloqueado('contacto_emergencia')"
               name="contacto_emergencia"
               type="text"
               maxlength="150"

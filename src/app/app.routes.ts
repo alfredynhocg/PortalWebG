@@ -4,7 +4,11 @@ import { ConvocatoriaDetalleComponent } from './convocatorias/convocatoria-detal
 import { PostularComponent } from './postulaciones/postular.component';
 import { PostulacionWizardComponent } from './postulaciones/postulacion-wizard.component';
 import { MisPostulacionesComponent } from './postulaciones/mis-postulaciones.component';
+import { NotificacionesComponent } from './postulaciones/notificaciones.component';
 import { PostulacionLayoutComponent } from './postulaciones/postulacion-layout.component';
+import { RegistroComponent } from './registro/registro.component';
+import { authGuard } from './core/auth.guard';
+import { registroGuard } from './core/registro.guard';
 
 export const routes: Routes = [
   // pathMatch: 'full' es imprescindible acá: sin él, path: '' (prefijo por
@@ -12,6 +16,10 @@ export const routes: Routes = [
   // de abajo — se detectó porque el build las prerenderaba como redirect a "/".
   { path: '', component: ConvocatoriasListComponent, pathMatch: 'full' },
   { path: 'convocatorias/detalle', component: ConvocatoriaDetalleComponent },
+  // Registro del usuario de Ciudadanía Digital (primer ingreso) y edición de
+  // sus datos. Requieren sesión.
+  { path: 'registro', component: RegistroComponent, canActivate: [authGuard] },
+  { path: 'mi-perfil', component: RegistroComponent, canActivate: [authGuard] },
   // Menú Lateral (pág. 43, ítem 20b): agrupa las pantallas del flujo de
   // postulación bajo un layout compartido con sidebar. El listado público
   // (arriba) queda fuera: ya tiene su propio encabezado institucional.
@@ -19,9 +27,12 @@ export const routes: Routes = [
     path: '',
     component: PostulacionLayoutComponent,
     children: [
-      { path: 'convocatorias/postular', component: PostularComponent },
-      { path: 'convocatorias/postulacion', component: PostulacionWizardComponent },
-      { path: 'postulaciones/mis-postulaciones', component: MisPostulacionesComponent },
+      // Postular exige sesión de Ciudadanía Digital y registro completo: el
+      // paso 1 se precarga con el perfil del usuario.
+      { path: 'convocatorias/postular', component: PostularComponent, canActivate: [authGuard, registroGuard] },
+      { path: 'convocatorias/postulacion', component: PostulacionWizardComponent, canActivate: [authGuard, registroGuard] },
+      { path: 'postulaciones/mis-postulaciones', component: MisPostulacionesComponent, canActivate: [authGuard] },
+      { path: 'postulaciones/notificaciones', component: NotificacionesComponent, canActivate: [authGuard] },
     ],
   },
 ];

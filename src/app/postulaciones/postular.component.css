@@ -194,3 +194,26 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Datos precargados que no se pueden modificar (CI del token y datos de Ciudadanía Digital). */
+.campo input[readonly],
+.campo select:disabled {
+  background: #f4f4f2;
+  color: #1c120e;
+  border-color: #e2e2de;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.candado {
+  font-size: 11px;
+}
+
+.nota-bloqueados {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--bs-primary, #cbab58);
+  background: #faf7ee;
+  font-size: 13px;
+  color: #4b4b49;
+}

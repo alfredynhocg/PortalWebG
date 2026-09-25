@@ -1,0 +1,101 @@
+/* Base: mis-postulaciones.component.css (.contenido, .panel, mensajes). */
+
+.notif-encabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif {
+  border: 1px solid #e6e3da;
+  border-left: 4px solid #9e9e98;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.notif--info {
+  border-left-color: var(--bs-primary, #cbab58);
+}
+
+.notif--exito {
+  border-left-color: #1b5e37;
+}
+
+.notif--alerta {
+  border-left-color: #bf1b2d;
+}
+
+.notif--no-leida {
+  background: #faf7ee;
+}
+
+.notif__cuerpo {
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.notif__titulo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #1c120e;
+  font-size: 14px;
+}
+
+.notif__punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bs-primary, #cbab58);
+  flex-shrink: 0;
+}
+
+.notif__convocatoria {
+  font-size: 12px;
+  color: #6b6b66;
+  background: #f1efe8;
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
+.notif__mensaje {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  color: #3d3d3b;
+  line-height: 1.5;
+}
+
+.notif__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notif__fecha {
+  font-size: 12px;
+  color: #888;
+}
+
+.btn-enlace {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #a8923a;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

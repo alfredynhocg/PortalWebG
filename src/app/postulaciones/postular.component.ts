@@ -4,9 +4,12 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../core/auth.service';
+import { CuentaService, PerfilPortal } from '../core/cuenta.service';
 import { PostulacionesService } from './postulaciones.service';
 import { DatosPersonalesPostulante, TipoArchivoSimple } from './postulacion.model';
 import { mensajeError } from './errores';
+import { DEPARTAMENTOS, ESTADOS_CIVILES, EXPEDIDOS } from './catalogos';
 import { aceptarPara, esImagen, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
 
 // Archivo elegido para uno de los 3 documentos del paso 1. Se sube recién
@@ -33,8 +36,14 @@ export class PostularComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly postulacionesService = inject(PostulacionesService);
+  private readonly cuenta = inject(CuentaService);
+  private readonly auth = inject(AuthService);
 
   codigo = '';
+  readonly cargandoPerfil = signal(true);
+  // CI/complemento (del token) y los datos que informó Ciudadanía Digital:
+  // se muestran precargados y no se pueden modificar.
+  readonly bloqueados = signal<ReadonlySet<string>>(new Set(['ci', 'complemento']));
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);
   // UUID de una postulación previa de este mismo CI guardada en este navegador
@@ -85,31 +94,9 @@ export class PostularComponent implements OnInit, OnDestroy {
     contacto_emergencia: '',
   };
 
-  readonly departamentos = [
-    { valor: 'LA_PAZ', etiqueta: 'LA PAZ' },
-    { valor: 'COCHABAMBA', etiqueta: 'COCHABAMBA' },
-    { valor: 'SANTA_CRUZ', etiqueta: 'SANTA CRUZ' },
-    { valor: 'ORURO', etiqueta: 'ORURO' },
-    { valor: 'POTOSI', etiqueta: 'POTOSÍ' },
-    { valor: 'CHUQUISACA', etiqueta: 'CHUQUISACA' },
-    { valor: 'TARIJA', etiqueta: 'TARIJA' },
-    { valor: 'BENI', etiqueta: 'BENI' },
-    { valor: 'PANDO', etiqueta: 'PANDO' },
-  ];
-
-  readonly expedidos = [
-    { valor: 'LP', etiqueta: 'LA PAZ' },
-    { valor: 'CB', etiqueta: 'COCHABAMBA' },
-    { valor: 'SC', etiqueta: 'SANTA CRUZ' },
-    { valor: 'OR', etiqueta: 'ORURO' },
-    { valor: 'PT', etiqueta: 'POTOSÍ' },
-    { valor: 'CH', etiqueta: 'CHUQUISACA' },
-    { valor: 'TJ', etiqueta: 'TARIJA' },
-    { valor: 'BE', etiqueta: 'BENI' },
-    { valor: 'PA', etiqueta: 'PANDO' },
-  ];
-
-  readonly estadosCiviles = ['SOLTERO', 'CASADO', 'DIVORCIADO', 'VIUDO', 'CONCUBINO'];
+  readonly departamentos = DEPARTAMENTOS;
+  readonly expedidos = EXPEDIDOS;
+  readonly estadosCiviles = ESTADOS_CIVILES;
 
   ngOnInit(): void {
     const codigo = this.route.snapshot.queryParamMap.get('codigo');
@@ -118,6 +105,61 @@ export class PostularComponent implements OnInit, OnDestroy {
       return;
     }
     this.codigo = codigo;
+    this.redirigirSiYaPostulo();
+    this.precargarPerfil();
+  }
+
+  // Entrada directa por URL con una postulación ya existente en esta
+  // convocatoria: la en curso se continúa en el wizard; la enviada se muestra
+  // en el detalle ("Ya te postulaste").
+  private redirigirSiYaPostulo(): void {
+    this.postulacionesService.postulacionEnConvocatoria(this.codigo).subscribe({
+      next: (existente) => {
+        if (!existente) {
+          return;
+        }
+        if (existente.editable) {
+          this.irAlSiguientePaso(existente.id);
+        } else {
+          this.volver();
+        }
+      },
+      error: () => {
+        // Si no se pudo verificar, el backend igual rechaza el duplicado (409).
+      },
+    });
+  }
+
+  bloqueado(campo: keyof DatosPersonalesPostulante): boolean {
+    return this.bloqueados().has(campo);
+  }
+
+  // Paso 1 precargado con el perfil del usuario (registro + Ciudadanía Digital).
+  private precargarPerfil(): void {
+    this.cuenta.perfil().subscribe({
+      next: ({ data }) => {
+        const perfil: PerfilPortal = data.perfil;
+        const datos = this.datos as unknown as Record<string, string | undefined>;
+        for (const campo of Object.keys(datos)) {
+          const valor = perfil[campo as keyof PerfilPortal];
+          if (typeof valor === 'string' && valor !== '') {
+            datos[campo] = valor;
+          }
+        }
+        this.datos.ci = data.ci;
+        this.datos.complemento = data.complemento ?? '';
+        this.bloqueados.set(new Set(['ci', 'complemento', ...(data.campos_bloqueados ?? [])]));
+        this.cargandoPerfil.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cargandoPerfil.set(false);
+        if (err.status === 401 || err.status === 404) {
+          this.auth.login(this.router.url);
+          return;
+        }
+        this.error.set(mensajeError(err, 'No se pudieron cargar tus datos. Intenta nuevamente.'));
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -235,19 +277,16 @@ export class PostularComponent implements OnInit, OnDestroy {
 
     this.postulacionesService.postular(this.codigo, this.datos).subscribe({
       next: (respuesta) => {
-        this.postulacionesService.guardarAcceso(this.codigo, this.datos.ci, this.datos.complemento, respuesta.data.id);
         this.postulacionCreadaId.set(respuesta.data.id);
         void this.subirDocumentos(respuesta.data.id);
       },
       error: (err: HttpErrorResponse) => {
         this.enviando.set(false);
         if (err.status === 409) {
-          // Ya existe una postulación de este CI para esta convocatoria. El 409
-          // NO devuelve el código de acceso; si esta misma persona la creó desde
-          // este navegador, se ofrece continuarla.
-          this.postulacionExistenteId.set(
-            this.postulacionesService.obtenerAcceso(this.codigo, this.datos.ci, this.datos.complemento)
-          );
+          // Ya tiene una postulación para esta convocatoria: el backend
+          // devuelve su código de acceso (el CI es el del token, así que
+          // quien pregunta es el dueño) y se ofrece continuarla.
+          this.postulacionExistenteId.set(err.error?.data?.id ?? null);
         }
         this.error.set(mensajeError(err, 'No se pudo enviar la postulación. Intenta nuevamente.'));
       },

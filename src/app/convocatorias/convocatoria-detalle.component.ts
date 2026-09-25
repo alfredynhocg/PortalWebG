@@ -2,6 +2,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from '../core/auth.service';
+import { PostulacionesService } from '../postulaciones/postulaciones.service';
+import { MiPostulacion, etiquetaEstadoPostulacion } from '../postulaciones/postulacion.model';
 import { ConvocatoriasService } from './convocatorias.service';
 import { ConvocatoriaDetalle, FormularioCampo } from './convocatoria.model';
 
@@ -18,6 +21,8 @@ export class ConvocatoriaDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly convocatoriasService = inject(ConvocatoriasService);
+  private readonly postulacionesService = inject(PostulacionesService);
+  private readonly auth = inject(AuthService);
 
   readonly convocatoria = signal<ConvocatoriaDetalle | null>(null);
   readonly cargando = signal(true);
@@ -25,6 +30,12 @@ export class ConvocatoriaDetalleComponent implements OnInit {
 
   readonly formularioCampos = signal<FormularioCampo[]>([]);
   readonly formularioError = signal<string | null>(null);
+
+  // Postulación que el usuario ya tiene en esta convocatoria (solo con sesión).
+  // Mientras se verifica, "Postularme" queda deshabilitado.
+  readonly miPostulacion = signal<MiPostulacion | null>(null);
+  readonly verificandoPostulacion = signal(false);
+  readonly etiquetaEstado = etiquetaEstadoPostulacion;
 
   ngOnInit(): void {
     const codigo = this.route.snapshot.queryParamMap.get('codigo');
@@ -49,6 +60,8 @@ export class ConvocatoriaDetalleComponent implements OnInit {
       },
     });
 
+    void this.verificarPostulacion(codigo);
+
     this.convocatoriasService.formularioPublicacion().subscribe({
       next: (respuesta) => {
         const campos = (respuesta.data.campos ?? []).filter((c) => !TIPOS_NO_CAMPO.has(c.frm_tipo));
@@ -58,6 +71,38 @@ export class ConvocatoriaDetalleComponent implements OnInit {
         this.formularioError.set('No se pudo cargar la estructura del formulario de convocatoria publicada.');
       },
     });
+  }
+
+  private async verificarPostulacion(codigo: string): Promise<void> {
+    await this.auth.sesionLista();
+    if (!this.auth.session().authenticated) {
+      return;
+    }
+    this.verificandoPostulacion.set(true);
+    this.postulacionesService.postulacionEnConvocatoria(codigo).subscribe({
+      next: (postulacion) => {
+        this.miPostulacion.set(postulacion);
+        this.verificandoPostulacion.set(false);
+      },
+      // Si no se pudo verificar, se deja postular: el backend igual rechaza
+      // un duplicado (409) y ofrece continuar la existente.
+      error: () => this.verificandoPostulacion.set(false),
+    });
+  }
+
+  continuarPostulacion(): void {
+    const p = this.miPostulacion();
+    if (p) {
+      this.router.navigate(['/convocatorias/postulacion'], { queryParams: { id: p.id, codigo: p.convocatoria } });
+    }
+  }
+
+  verMisPostulaciones(): void {
+    this.router.navigate(['/postulaciones/mis-postulaciones']);
+  }
+
+  fechaHora(iso: string | null): string {
+    return iso ? new Date(iso).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' }) : '';
   }
 
   volver(): void {

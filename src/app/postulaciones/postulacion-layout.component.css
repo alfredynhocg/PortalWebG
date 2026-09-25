@@ -51,12 +51,22 @@
   font-weight: 600;
 }
 
-.menu-lateral__deshabilitado {
-  display: block;
-  padding: 12px 20px;
-  color: rgba(245, 245, 245, 0.4);
-  font-size: 14px;
-  cursor: not-allowed;
+.menu-lateral__con-contador {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contador {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #bf1b2d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .layout__contenido {

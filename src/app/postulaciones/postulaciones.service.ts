@@ -1,8 +1,6 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { DEMO_CONFIG } from '../demo-config';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable, map } from 'rxjs';
 import {
   ArchivoSubidoResponse,
   BloqueResponse,
@@ -15,6 +13,7 @@ import {
   ExperienciaInput,
   Formacion,
   FormacionInput,
+  MiPostulacion,
   MisPostulacionesResponse,
   Postulacion,
   PostulacionResponse,
@@ -23,63 +22,23 @@ import {
   TipoArchivo,
 } from './postulacion.model';
 
+// Llamadas del postulante: pasan por el servidor del portal (/api/postulante),
+// que las reenvía a Laravel (/api/portal) con el token de Ciudadanía Digital
+// de la sesión. El CI lo pone el backend a partir del token.
+const BASE = '/api/postulante';
+
 @Injectable({ providedIn: 'root' })
 export class PostulacionesService {
-  private readonly platformId = inject(PLATFORM_ID);
-
   constructor(private http: HttpClient) {}
 
-  // El código de acceso (UUID) del paso 1 es la única forma de volver a una
-  // postulación: "Mis postulaciones" no lo devuelve y un 409 tampoco. Se guarda
-  // en el navegador por convocatoria + persona (CI + complemento).
-  private claveAcceso(codigo: string, ci: string, complemento?: string): string {
-    return `portal:postulacion:${codigo}:${ci.trim()}:${(complemento ?? '').trim().toUpperCase()}`;
-  }
-
-  guardarAcceso(codigo: string, ci: string, complemento: string | undefined, id: string): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-    try {
-      localStorage.setItem(this.claveAcceso(codigo, ci, complemento), id);
-    } catch {
-      // almacenamiento no disponible (modo privado, cuota): el flujo sigue sin él
-    }
-  }
-
-  obtenerAcceso(codigo: string, ci: string, complemento?: string): string | null {
-    if (!isPlatformBrowser(this.platformId)) {
-      return null;
-    }
-    try {
-      return localStorage.getItem(this.claveAcceso(codigo, ci, complemento));
-    } catch {
-      return null;
-    }
-  }
-
-  olvidarAcceso(codigo: string, ci: string, complemento?: string): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-    try {
-      localStorage.removeItem(this.claveAcceso(codigo, ci, complemento));
-    } catch {
-      // ídem guardarAcceso
-    }
-  }
-
   private headers(): HttpHeaders {
-    return new HttpHeaders({
-      Authorization: `Bearer ${DEMO_CONFIG.demoToken}`,
-      Accept: 'application/json',
-    });
+    return new HttpHeaders({ Accept: 'application/json' });
   }
 
   // Paso 1 — PostulanteController::postular().
   postular(codigo: string, datos: DatosPersonalesPostulante): Observable<PostulacionResponse> {
     return this.http.post<PostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/convocatorias/${codigo}/postulaciones`,
+      `${BASE}/convocatorias/${codigo}/postulaciones`,
       datos,
       { headers: this.headers() }
     );
@@ -90,7 +49,7 @@ export class PostulacionesService {
   // mientras esté en ELABORADO (422 si ya fue enviada).
   actualizarDatos(postulacionId: string, datos: DatosPersonalesPostulante): Observable<PostulacionResumenResponse> {
     return this.http.put<PostulacionResumenResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/datos`,
+      `${BASE}/postulaciones/${postulacionId}/datos`,
       datos,
       { headers: this.headers() }
     );
@@ -99,7 +58,7 @@ export class PostulacionesService {
   // Paso 2 — PostulanteController::agregarFormacion().
   agregarFormacion(postulacionId: string, datos: FormacionInput): Observable<BloqueResponse<Formacion>> {
     return this.http.post<BloqueResponse<Formacion>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/formaciones`,
+      `${BASE}/postulaciones/${postulacionId}/formaciones`,
       datos,
       { headers: this.headers() }
     );
@@ -108,7 +67,7 @@ export class PostulacionesService {
   // Paso 3 — PostulanteController::agregarExperiencia().
   agregarExperiencia(postulacionId: string, datos: ExperienciaInput): Observable<BloqueResponse<Experiencia>> {
     return this.http.post<BloqueResponse<Experiencia>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/experiencias`,
+      `${BASE}/postulaciones/${postulacionId}/experiencias`,
       datos,
       { headers: this.headers() }
     );
@@ -117,7 +76,7 @@ export class PostulacionesService {
   // Paso 4 — PostulanteController::agregarConocimiento().
   agregarConocimiento(postulacionId: string, datos: ConocimientoInput): Observable<BloqueResponse<Conocimiento>> {
     return this.http.post<BloqueResponse<Conocimiento>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/conocimientos`,
+      `${BASE}/postulaciones/${postulacionId}/conocimientos`,
       datos,
       { headers: this.headers() }
     );
@@ -130,7 +89,7 @@ export class PostulacionesService {
   // PostulanteController::editarFormacion/Experiencia/Conocimiento().
   editarFormacion(postulacionId: string, bloqueId: number, datos: FormacionInput): Observable<BloqueResponse<Formacion>> {
     return this.http.put<BloqueResponse<Formacion>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/formaciones/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/formaciones/${bloqueId}`,
       datos,
       { headers: this.headers() }
     );
@@ -138,7 +97,7 @@ export class PostulacionesService {
 
   editarExperiencia(postulacionId: string, bloqueId: number, datos: ExperienciaInput): Observable<BloqueResponse<Experiencia>> {
     return this.http.put<BloqueResponse<Experiencia>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/experiencias/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/experiencias/${bloqueId}`,
       datos,
       { headers: this.headers() }
     );
@@ -146,7 +105,7 @@ export class PostulacionesService {
 
   editarConocimiento(postulacionId: string, bloqueId: number, datos: ConocimientoInput): Observable<BloqueResponse<Conocimiento>> {
     return this.http.put<BloqueResponse<Conocimiento>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/conocimientos/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/conocimientos/${bloqueId}`,
       datos,
       { headers: this.headers() }
     );
@@ -158,7 +117,7 @@ export class PostulacionesService {
   // no se puede mover "arriba" ni el último "abajo" (422).
   moverFormacion(postulacionId: string, bloqueId: number, direccion: DireccionOrden): Observable<QuitarPostulacionResponse> {
     return this.http.patch<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/formaciones/${bloqueId}/orden`,
+      `${BASE}/postulaciones/${postulacionId}/formaciones/${bloqueId}/orden`,
       { direccion },
       { headers: this.headers() }
     );
@@ -166,7 +125,7 @@ export class PostulacionesService {
 
   moverExperiencia(postulacionId: string, bloqueId: number, direccion: DireccionOrden): Observable<QuitarPostulacionResponse> {
     return this.http.patch<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/experiencias/${bloqueId}/orden`,
+      `${BASE}/postulaciones/${postulacionId}/experiencias/${bloqueId}/orden`,
       { direccion },
       { headers: this.headers() }
     );
@@ -174,7 +133,7 @@ export class PostulacionesService {
 
   moverConocimiento(postulacionId: string, bloqueId: number, direccion: DireccionOrden): Observable<QuitarPostulacionResponse> {
     return this.http.patch<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/conocimientos/${bloqueId}/orden`,
+      `${BASE}/postulaciones/${postulacionId}/conocimientos/${bloqueId}/orden`,
       { direccion },
       { headers: this.headers() }
     );
@@ -185,21 +144,21 @@ export class PostulacionesService {
   // ELABORADO; una postulación ya enviada responde 422.
   eliminarFormacion(postulacionId: string, bloqueId: number): Observable<QuitarPostulacionResponse> {
     return this.http.delete<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/formaciones/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/formaciones/${bloqueId}`,
       { headers: this.headers() }
     );
   }
 
   eliminarExperiencia(postulacionId: string, bloqueId: number): Observable<QuitarPostulacionResponse> {
     return this.http.delete<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/experiencias/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/experiencias/${bloqueId}`,
       { headers: this.headers() }
     );
   }
 
   eliminarConocimiento(postulacionId: string, bloqueId: number): Observable<QuitarPostulacionResponse> {
     return this.http.delete<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/conocimientos/${bloqueId}`,
+      `${BASE}/postulaciones/${postulacionId}/conocimientos/${bloqueId}`,
       { headers: this.headers() }
     );
   }
@@ -212,7 +171,7 @@ export class PostulacionesService {
     formulario.append('tipo', tipo);
     formulario.append('archivo', archivo, archivo.name);
     return this.http.post<ArchivoSubidoResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/archivos`,
+      `${BASE}/postulaciones/${postulacionId}/archivos`,
       formulario,
       { headers: this.headers() }
     );
@@ -222,7 +181,7 @@ export class PostulacionesService {
   // obligatorios y cuáles faltan. PortalDocumentoPostulacionController::documentos().
   documentos(postulacionId: string): Observable<ChecklistDocumentosResponse> {
     return this.http.get<ChecklistDocumentosResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/documentos`,
+      `${BASE}/postulaciones/${postulacionId}/documentos`,
       { headers: this.headers() }
     );
   }
@@ -238,15 +197,15 @@ export class PostulacionesService {
   // experiencia/conocimiento; para foto_perfil/cedula/libreta se omite.
   verDocumento(postulacionId: string, tipo: TipoArchivo, bloqueId?: number): Observable<Blob> {
     const ruta = bloqueId != null
-      ? `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/documentos/${tipo}/${bloqueId}`
-      : `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/documentos/${tipo}`;
+      ? `${BASE}/postulaciones/${postulacionId}/documentos/${tipo}/${bloqueId}`
+      : `${BASE}/postulaciones/${postulacionId}/documentos/${tipo}`;
     return this.http.get(ruta, { headers: this.headers(), responseType: 'blob' });
   }
 
   // Paso 5 (resumen) — PostulanteController::resumen().
   resumen(postulacionId: string): Observable<PostulacionResumenResponse> {
     return this.http.get<PostulacionResumenResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}`,
+      `${BASE}/postulaciones/${postulacionId}`,
       { headers: this.headers() }
     );
   }
@@ -254,7 +213,7 @@ export class PostulacionesService {
   // Paso 6 (confirmar) — PostulanteController::confirmar().
   confirmar(postulacionId: string): Observable<BloqueResponse<Postulacion>> {
     return this.http.post<BloqueResponse<Postulacion>>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}/confirmar`,
+      `${BASE}/postulaciones/${postulacionId}/confirmar`,
       {},
       { headers: this.headers() }
     );
@@ -264,22 +223,22 @@ export class PostulacionesService {
   // la convocatoria vigente; una ya enviada responde 422.
   quitar(postulacionId: string): Observable<QuitarPostulacionResponse> {
     return this.http.delete<QuitarPostulacionResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulaciones/${postulacionId}`,
+      `${BASE}/postulaciones/${postulacionId}`,
       { headers: this.headers() }
     );
   }
 
-  // Mis postulaciones — PostulanteController::misPostulaciones(). El CI puede
-  // repetirse entre personas: con `complemento` (1 a 3 letras o números) solo
-  // devuelve las de esa persona; sin él, todas las de ese número de CI.
-  misPostulaciones(ci: string, complemento?: string): Observable<MisPostulacionesResponse> {
-    let params = new HttpParams();
-    if (complemento && complemento.trim() !== '') {
-      params = params.set('complemento', complemento.trim());
-    }
-    return this.http.get<MisPostulacionesResponse>(
-      `${DEMO_CONFIG.apiBaseUrl}/portal/postulantes/${encodeURIComponent(ci.trim())}/postulaciones`,
-      { headers: this.headers(), params }
+  // Mis postulaciones — PostulanteController::misPostulaciones(). Las del CI
+  // de la sesión (Ciudadanía Digital): ya no se pide el CI.
+  misPostulaciones(): Observable<MisPostulacionesResponse> {
+    return this.http.get<MisPostulacionesResponse>(`${BASE}/mis-postulaciones`, { headers: this.headers() });
+  }
+
+  // La postulación del usuario en esa convocatoria, si ya tiene una (una sola
+  // por CI y convocatoria: el backend no deja duplicarla). null = puede postular.
+  postulacionEnConvocatoria(codigo: string): Observable<MiPostulacion | null> {
+    return this.misPostulaciones().pipe(
+      map((respuesta) => respuesta.data.find((p) => p.convocatoria === codigo) ?? null)
     );
   }
 }

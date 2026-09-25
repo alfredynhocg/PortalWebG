@@ -1,32 +1,26 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PostulacionesService } from './postulaciones.service';
 import { mensajeError } from './errores';
-import { EstadoMiPostulacion, MiPostulacion } from './postulacion.model';
+import { EstadoMiPostulacion, MiPostulacion, etiquetaEstadoPostulacion } from './postulacion.model';
 
 // Pantalla "Mis postulaciones" (pág. 58-60 del requerimiento): bandeja de
-// seguimiento del postulante. Como todavía no hay integración real con
-// Ciudadanía Digital (ítem 21, pendiente de credenciales oficiales), la
-// identificación es la misma que ya usa el resto del portal: CI + complemento
-// tipeados a mano — no hay sesión de la que tomar el CI del usuario logueado.
+// seguimiento del postulante. Muestra las postulaciones del CI de la sesión de
+// Ciudadanía Digital (el backend lo toma del token): ya no se tipea el CI.
 @Component({
   selector: 'app-mis-postulaciones',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './mis-postulaciones.component.html',
   styleUrl: './mis-postulaciones.component.css',
 })
-export class MisPostulacionesComponent {
+export class MisPostulacionesComponent implements OnInit {
   private readonly postulacionesService = inject(PostulacionesService);
   private readonly router = inject(Router);
 
-  ci = '';
-  complemento = '';
-
-  readonly buscando = signal(false);
+  readonly buscando = signal(true);
   readonly error = signal<string | null>(null);
   readonly resultados = signal<MiPostulacion[] | null>(null);
   // id de la postulación con la confirmación de "Quitar" abierta (evita un
@@ -34,16 +28,15 @@ export class MisPostulacionesComponent {
   readonly confirmandoQuitarId = signal<string | null>(null);
   readonly quitandoId = signal<string | null>(null);
 
-  buscar(formulario: NgForm): void {
-    if (formulario.invalid) {
-      formulario.form.markAllAsTouched();
-      return;
-    }
+  ngOnInit(): void {
+    this.cargar();
+  }
+
+  cargar(): void {
     this.error.set(null);
     this.confirmandoQuitarId.set(null);
     this.buscando.set(true);
-    this.resultados.set(null);
-    this.postulacionesService.misPostulaciones(this.ci, this.complemento).subscribe({
+    this.postulacionesService.misPostulaciones().subscribe({
       next: (respuesta) => {
         this.buscando.set(false);
         this.resultados.set(respuesta.data);
@@ -93,19 +86,6 @@ export class MisPostulacionesComponent {
 
   // pág. 59: catálogo cerrado de estados.
   etiquetaEstado(estado: EstadoMiPostulacion): string {
-    switch (estado) {
-      case 'ELABORADO':
-        return 'Elaborado';
-      case 'ENVIADO':
-        return 'Enviado';
-      case 'EN_REVISION':
-        return 'En revisión';
-      case 'HABILITADO':
-        return 'Habilitado';
-      case 'INHABILITADO':
-        return 'Inhabilitado';
-      default:
-        return estado;
-    }
+    return etiquetaEstadoPostulacion(estado);
   }
 }

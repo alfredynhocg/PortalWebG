@@ -141,3 +141,47 @@
   cursor: pointer;
   margin-bottom: 12px;
 }
+
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.btn-secundario {
+  background: none;
+  border: 1px solid var(--bs-primary, #cbab58);
+  color: #a8923a;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Ya tiene postulación en esta convocatoria: reemplaza a "Postularme". */
+.aviso-postulacion {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-left: 3px solid #1b5e37;
+  background: #eef6f0;
+  color: #1c120e;
+  font-size: 14px;
+}
+
+.aviso-postulacion p {
+  margin: 0 0 8px;
+}
+
+.aviso-postulacion__detalle {
+  font-size: 13px;
+  color: #4b4b49;
+}
+
+.aviso-postulacion--curso {
+  border-left-color: var(--bs-primary, #cbab58);
+  background: #faf7ee;
+}
+
+.aviso-postulacion .btn-primario {
+  margin-bottom: 0;
+}

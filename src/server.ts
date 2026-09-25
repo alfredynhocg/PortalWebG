@@ -8,6 +8,8 @@ import express from 'express';
 import session from 'express-session';
 import { join } from 'node:path';
 import { authRouter } from './server/auth.routes';
+import { cuentaRouter } from './server/cuenta.routes';
+import { proxyPostulante } from './server/postulante.proxy';
 import { requireEnv } from './server/oidc';
 
 try {
@@ -39,8 +41,17 @@ app.use(
 );
 
 app.use(authRouter);
+app.use(cuentaRouter);
+// Postular, wizard, documentos y "Mis postulaciones": van a Laravel con el token de la sesión.
+app.use('/api/postulante', proxyPostulante);
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  // Las llamadas del frontend (/api/*) esperan JSON; las del flujo de login, una redirección.
+  if (req.path.startsWith('/api/')) {
+    console.error('Error en', req.method, req.path, err);
+    res.status(502).json({ error: { message: 'No se pudo contactar al servidor. Intenta nuevamente.', code: 502 } });
+    return;
+  }
   console.error('Error de autenticación:', err);
   res.redirect('/?authError=1');
 });

@@ -16,8 +16,27 @@
       </div>
       <p class="detalle__codigo">Código: {{ c.codigo }}</p>
 
-      @if (c.vigente) {
-        <button type="button" class="btn-primario" (click)="postularme()">Postularme</button>
+      @if (miPostulacion(); as p) {
+        @if (p.editable) {
+          <div class="aviso-postulacion aviso-postulacion--curso" role="status">
+            <p><strong>Tienes una postulación en curso para esta convocatoria.</strong> Todavía no la enviaste.</p>
+            <button type="button" class="btn-primario" (click)="continuarPostulacion()">Continuar mi postulación</button>
+          </div>
+        } @else {
+          <div class="aviso-postulacion" role="status">
+            <p><strong>✔ Ya te postulaste a esta convocatoria.</strong></p>
+            <p class="aviso-postulacion__detalle">
+              Estado: <strong>{{ etiquetaEstado(p.estado) }}</strong>
+              @if (p.codigo_postulacion) { · Código: {{ p.codigo_postulacion }} }
+              @if (p.fecha_envio) { · Enviada el {{ fechaHora(p.fecha_envio) }} }
+            </p>
+            <button type="button" class="btn-secundario" (click)="verMisPostulaciones()">Ver mis postulaciones</button>
+          </div>
+        }
+      } @else if (c.vigente) {
+        <button type="button" class="btn-primario" (click)="postularme()" [disabled]="verificandoPostulacion()">
+          {{ verificandoPostulacion() ? 'Verificando...' : 'Postularme' }}
+        </button>
       }
 
       <dl class="detalle__datos">

@@ -82,7 +82,7 @@ export interface ChecklistDocumentosResponse {
 }
 
 // `id` es el CÓDIGO DE ACCESO (UUID) que devuelve el paso 1, no un número: es
-// la única forma de volver a la postulación (ver PostulacionesService.guardarAcceso).
+// la forma de volver a la postulación (también la listan "Mis postulaciones" y el 409 de postular).
 // `cas_id` es el id numérico de la CONVOCATORIA publicada.
 export interface Postulacion {
   id: string;
@@ -231,6 +231,24 @@ export interface MiPostulacion {
   convocatoria_activa: boolean;
   editable: boolean;
   puede_quitar: boolean;
+}
+
+// pág. 59: catálogo cerrado de estados, como se muestran al postulante.
+export function etiquetaEstadoPostulacion(estado: EstadoMiPostulacion): string {
+  switch (estado) {
+    case 'ELABORADO':
+      return 'Elaborado';
+    case 'ENVIADO':
+      return 'Enviado';
+    case 'EN_REVISION':
+      return 'En revisión';
+    case 'HABILITADO':
+      return 'Habilitado';
+    case 'INHABILITADO':
+      return 'Inhabilitado';
+    default:
+      return estado;
+  }
 }
 
 export interface MisPostulacionesResponse {

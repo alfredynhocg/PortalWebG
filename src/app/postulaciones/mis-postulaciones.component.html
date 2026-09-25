@@ -2,31 +2,8 @@
   <article class="panel">
     <h1>Mis postulaciones</h1>
     <p class="panel__nota">
-      Ingresá tu número de CI para ver el estado de tus postulaciones. El complemento es opcional: solo hace falta
-      si tu CI se repite con el de otra persona.
+      Estas son las postulaciones registradas con tu cédula de identidad (sesión de Ciudadanía Digital).
     </p>
-
-    <form #f="ngForm" (ngSubmit)="buscar(f)" novalidate class="form-busqueda">
-      <div class="campo">
-        <label for="ci">N° de CI *</label>
-        <input id="ci" name="ci" type="text" maxlength="20" required [(ngModel)]="ci" />
-      </div>
-      <div class="campo campo--corto">
-        <label for="complemento">Complemento</label>
-        <input
-          id="complemento"
-          name="complemento"
-          type="text"
-          maxlength="3"
-          pattern="[0-9A-Za-z]{1,3}"
-          title="1 a 3 letras o números (p. ej. 1A)"
-          [(ngModel)]="complemento"
-        />
-      </div>
-      <button type="submit" class="btn-primario" [disabled]="buscando()">
-        {{ buscando() ? 'Buscando...' : 'Buscar' }}
-      </button>
-    </form>
 
     @if (error()) {
       <p class="mensaje-error" role="alert">{{ error() }}</p>
@@ -36,7 +13,7 @@
       <p class="mensaje-cargando">Buscando tus postulaciones...</p>
     } @else if (resultados(); as filas) {
       @if (filas.length === 0) {
-        <p class="mensaje-vacio">No se encontraron postulaciones con ese CI.</p>
+        <p class="mensaje-vacio">Todavía no tienes postulaciones.</p>
       } @else {
         <div class="table-wrap">
           <table class="tabla-postulaciones">

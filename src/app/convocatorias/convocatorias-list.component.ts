@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ConvocatoriasService } from './convocatorias.service';
 import { Convocatoria } from './convocatoria.model';
@@ -9,13 +9,17 @@ import { Convocatoria } from './convocatoria.model';
 @Component({
   selector: 'app-convocatorias-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './convocatorias-list.component.html',
   styleUrl: './convocatorias-list.component.css',
 })
 export class ConvocatoriasListComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  // Recién completó el registro (viene de /registro con ?registro=ok).
+  readonly registroRecienCompletado = signal(false);
 
   readonly convocatorias = signal<Convocatoria[]>([]);
   readonly totalRegistros = signal(0);
@@ -34,6 +38,8 @@ export class ConvocatoriasListComponent implements OnInit {
   constructor(private convocatoriasService: ConvocatoriasService) {}
 
   ngOnInit(): void {
+    this.registroRecienCompletado.set(this.route.snapshot.queryParamMap.get('registro') === 'ok');
+
     this.convocatoriasService.stream().subscribe((resultado) => {
       if (resultado.ok) {
         this.convocatorias.set(resultado.respuesta.data);
@@ -50,6 +56,11 @@ export class ConvocatoriasListComponent implements OnInit {
     });
 
     this.cargar();
+  }
+
+  cerrarAvisoRegistro(): void {
+    this.registroRecienCompletado.set(false);
+    void this.router.navigate([], { queryParams: { registro: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   get totalPaginas(): number {

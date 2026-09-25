@@ -127,6 +127,12 @@
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.cd-usuario__nombre:hover {
+  text-decoration: underline;
 }
 
 .cd-usuario__salir {
@@ -374,4 +380,27 @@
 .paginacion button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Aviso tras completar el registro (/?registro=ok). */
+.aviso-registro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-left: 3px solid #1b5e37;
+  background: #eef6f0;
+  color: #1c120e;
+  font-size: 14px;
+}
+
+.aviso-registro__cerrar {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #4b4b49;
 }

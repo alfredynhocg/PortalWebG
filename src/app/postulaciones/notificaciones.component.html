@@ -1,0 +1,44 @@
+<main class="contenido">
+  <article class="panel">
+    <div class="notif-encabezado">
+      <h1>Notificaciones</h1>
+      @if (noLeidas() > 0) {
+        <button type="button" class="btn-enlace" (click)="marcarTodasLeidas()">Marcar todas como leídas</button>
+      }
+    </div>
+    <p class="panel__nota">Avisos sobre el proceso de tus postulaciones: envío y resultados de la evaluación.</p>
+
+    @if (error()) {
+      <p class="mensaje-error" role="alert">{{ error() }}</p>
+    }
+
+    @if (cargando()) {
+      <p class="mensaje-cargando">Cargando tus notificaciones...</p>
+    } @else if (notificaciones().length === 0 && !error()) {
+      <p class="mensaje-vacio">No tienes notificaciones todavía.</p>
+    } @else {
+      <ul class="notif-lista">
+        @for (n of notificaciones(); track n.id) {
+          <li [class]="'notif notif--' + n.nivel + (n.leida ? '' : ' notif--no-leida')">
+            <div class="notif__cuerpo" (click)="marcarLeida(n)">
+              <div class="notif__titulo">
+                @if (!n.leida) {
+                  <span class="notif__punto" aria-label="Sin leer"></span>
+                }
+                <strong>{{ n.titulo }}</strong>
+                @if (n.codigo_convocatoria) {
+                  <span class="notif__convocatoria">{{ n.codigo_convocatoria }}</span>
+                }
+              </div>
+              <p class="notif__mensaje">{{ n.mensaje }}</p>
+              <div class="notif__pie">
+                <time class="notif__fecha">{{ fecha(n.fecha) }}</time>
+                <button type="button" class="btn-enlace" (click)="verPostulacion(n); $event.stopPropagation()">Ver postulación</button>
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </article>
+</main>
