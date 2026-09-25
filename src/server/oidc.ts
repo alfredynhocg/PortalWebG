@@ -31,6 +31,18 @@ export function requireEnv(name: string): string {
   return value;
 }
 
+// Prefijo público del portal: '' en local, '/portal' en el servidor (Apache
+// reenvía /portal/* a Node SIN quitar el prefijo y Angular se compila con
+// --base-href /portal/). Todas las rutas de Express y sus redirecciones lo usan.
+export function basePath(): string {
+  return (process.env['BASE_PATH'] ?? '').replace(/\/+$/, '');
+}
+
+// Ruta interna del portal ('/registro') → URL pública ('/portal/registro').
+export function conBase(ruta: string): string {
+  return `${basePath()}${ruta.startsWith('/') ? ruta : `/${ruta}`}`;
+}
+
 // Función y no constante: el .env se carga en server.ts DESPUÉS de evaluar los imports.
 export function oidcScopes(): string {
   return process.env['OIDC_SCOPES'] ?? 'openid profile email';

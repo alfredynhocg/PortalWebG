@@ -53,10 +53,10 @@ export class CuentaService {
   private readonly http = inject(HttpClient);
 
   perfil(): Observable<PerfilResponse> {
-    return this.http.get<PerfilResponse>('/api/cuenta/perfil');
+    return this.http.get<PerfilResponse>('api/cuenta/perfil');
   }
 
   guardarPerfil(datos: DatosRegistro): Observable<PerfilResponse> {
-    return this.http.put<PerfilResponse>('/api/cuenta/perfil', datos);
+    return this.http.put<PerfilResponse>('api/cuenta/perfil', datos);
   }
 }

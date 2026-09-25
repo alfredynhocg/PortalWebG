@@ -32,18 +32,18 @@ export class NotificacionesService {
 
   listar(): Observable<NotificacionesResponse> {
     return this.http
-      .get<NotificacionesResponse>('/api/postulante/notificaciones')
+      .get<NotificacionesResponse>('api/postulante/notificaciones')
       .pipe(tap((r) => this.noLeidas.set(r.no_leidas)));
   }
 
   marcarLeida(id: number): Observable<unknown> {
     return this.http
-      .post(`/api/postulante/notificaciones/${id}/leida`, {})
+      .post(`api/postulante/notificaciones/${id}/leida`, {})
       .pipe(tap(() => this.noLeidas.update((n) => Math.max(0, n - 1))));
   }
 
   marcarTodasLeidas(): Observable<unknown> {
-    return this.http.post('/api/postulante/notificaciones/leidas', {}).pipe(tap(() => this.noLeidas.set(0)));
+    return this.http.post('api/postulante/notificaciones/leidas', {}).pipe(tap(() => this.noLeidas.set(0)));
   }
 
   // Solo el contador (menú lateral). Sin sesión no consulta nada.

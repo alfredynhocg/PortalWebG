@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import * as client from 'openid-client';
-import { decodificarJwt, getOidcConfig, oidcScopes, requireEnv } from './oidc';
+import { basePath, conBase, decodificarJwt, getOidcConfig, oidcScopes, requireEnv } from './oidc';
 
 declare module 'express-session' {
   interface SessionData {
@@ -21,11 +21,22 @@ declare module 'express-session' {
   }
 }
 
+// Se monta bajo el prefijo del portal (ver basePath() y server.ts): las rutas
+// de acá son relativas a él y las redirecciones internas pasan por conBase().
 export const authRouter = Router();
 
-// Solo rutas internas: evita que ?returnTo=https://otro-sitio convierta el login en un open redirect.
+// returnTo es una ruta de la app ('/convocatorias/detalle?...'), sin el prefijo.
+// Solo rutas internas: evita que ?returnTo=https://otro-sitio convierta el login
+// en un open redirect. Si llega con el prefijo (/portal/...), se le quita.
 function returnToSeguro(valor: unknown): string {
-  return typeof valor === 'string' && valor.startsWith('/') && !valor.startsWith('//') ? valor : '/';
+  if (typeof valor !== 'string' || !valor.startsWith('/') || valor.startsWith('//')) {
+    return '/';
+  }
+  const base = basePath();
+  if (base && (valor === base || valor.startsWith(`${base}/`))) {
+    return valor.slice(base.length) || '/';
+  }
+  return valor;
 }
 
 // Inicia el login: redirige a Keycloak, que ofrece Ciudadanía Digital.
@@ -69,9 +80,8 @@ async function registrarEnBackend(accessToken: string): Promise<Record<string, u
   return cuerpo.data;
 }
 
-// Callback: la "Valid redirect URI" registrada en Keycloak. Hoy solo está
-// registrada http://localhost:3000/callback; /login queda para cuando registren
-// la URL definitiva del portal.
+// Callback: la "Valid redirect URI" registrada en Keycloak (OIDC_REDIRECT_URI,
+// p. ej. http://localhost:3000/callback o https://<host>/portal/callback).
 async function callback(req: Request, res: Response, next: NextFunction) {
   const txn = req.session.oidcTxn;
   try {
@@ -112,10 +122,10 @@ async function callback(req: Request, res: Response, next: NextFunction) {
     // al guardar, /registro lleva al listado de convocatorias.
     // /api/* se deja pasar para poder depurar con /api/auth/debug.
     if (backend['registro_completo'] !== true && !txn.returnTo.startsWith('/api/')) {
-      res.redirect('/registro');
+      res.redirect(conBase('/registro'));
       return;
     }
-    res.redirect(txn.returnTo);
+    res.redirect(conBase(txn.returnTo));
   } catch (err) {
     delete req.session.oidcTxn;
     next(err);
@@ -134,7 +144,7 @@ authRouter.get('/auth/logout', async (req, res, next) => {
           id_token_hint: idToken,
           post_logout_redirect_uri: requireEnv('OIDC_POST_LOGOUT_REDIRECT_URI'),
         }).href
-      : '/';
+      : conBase('/');
 
     req.session.destroy((err) => {
       if (err) {
@@ -150,7 +160,7 @@ authRouter.get('/auth/logout', async (req, res, next) => {
 
 // Callback configurado como "URL de redirección al cerrar sesión" en el proveedor.
 authRouter.get('/logout', (_req, res) => {
-  res.redirect('/');
+  res.redirect(conBase('/'));
 });
 
 // SOLO DESARROLLO: muestra lo que llegó de Keycloak en el último login (claims

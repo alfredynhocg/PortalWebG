@@ -9,7 +9,7 @@ import { AuthService } from './auth.service';
 //  403 registro_incompleto → completar el registro.
 // El error sigue su curso para que la pantalla deje de mostrar "cargando".
 export const sesionInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith('/api/postulante') && !req.url.startsWith('/api/cuenta')) {
+  if (!/^\/?api\/(postulante|cuenta)\//.test(req.url)) {
     return next(req);
   }
   const auth = inject(AuthService);

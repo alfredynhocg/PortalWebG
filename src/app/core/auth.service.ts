@@ -30,6 +30,12 @@ export interface AuthSession {
   backend?: UsuarioBackend;
 }
 
+// URL de una ruta del servidor del portal (Express), relativa al <base href>:
+// '/auth/login' en local, '/portal/auth/login' en el servidor.
+function urlDelPortal(ruta: string): string {
+  return new URL(ruta, document.baseURI).href;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -66,7 +72,7 @@ export class AuthService {
   // Vuelve a pedir la sesión (p. ej. después de completar el registro).
   async recargar(): Promise<void> {
     try {
-      const session = await firstValueFrom(this.http.get<AuthSession>('/api/auth/session'));
+      const session = await firstValueFrom(this.http.get<AuthSession>('api/auth/session'));
       this.session.set(session);
     } catch {
       this.session.set({ authenticated: false });
@@ -80,13 +86,13 @@ export class AuthService {
       return;
     }
     const destino = encodeURIComponent(returnTo ?? window.location.pathname + window.location.search);
-    window.location.href = `/auth/login?returnTo=${destino}`;
+    window.location.href = urlDelPortal(`auth/login?returnTo=${destino}`);
   }
 
   logout(): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
-    window.location.href = '/auth/logout';
+    window.location.href = urlDelPortal('auth/logout');
   }
 }

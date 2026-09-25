@@ -25,7 +25,9 @@ import {
 // Llamadas del postulante: pasan por el servidor del portal (/api/postulante),
 // que las reenvía a Laravel (/api/portal) con el token de Ciudadanía Digital
 // de la sesión. El CI lo pone el backend a partir del token.
-const BASE = '/api/postulante';
+// Relativa (sin '/' inicial): se resuelve contra el <base href> ('/' en local,
+// '/portal/' en el servidor).
+const BASE = 'api/postulante';
 
 @Injectable({ providedIn: 'root' })
 export class PostulacionesService {
