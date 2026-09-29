@@ -48,6 +48,25 @@ export function oidcScopes(): string {
   return process.env['OIDC_SCOPES'] ?? 'openid profile email';
 }
 
+// Alias del Identity Provider de Ciudadanía Digital en el realm (kc_idp_hint):
+// Keycloak salta su propia pantalla de login y va directo a Ciudadanía.
+export function oidcIdpHint(): string | undefined {
+  return process.env['OIDC_IDP_HINT'] || undefined;
+}
+
+// true si el JWT todavía no expira (con un margen en segundos).
+export function jwtVigente(jwt: string | undefined, margenSeg = 5): boolean {
+  if (!jwt) {
+    return false;
+  }
+  try {
+    const exp = decodificarJwt(jwt)['exp'];
+    return typeof exp === 'number' && exp > Date.now() / 1000 + margenSeg;
+  } catch {
+    return false;
+  }
+}
+
 // Lee los claims de un JWT SIN verificar la firma. Solo para uso interno del
 // servidor: el token llegó directo del token endpoint por HTTPS. Quien sí debe
 // verificar la firma es el backend (Laravel), que recibe el token por un header.

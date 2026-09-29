@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import * as client from 'openid-client';
-import { basePath, conBase, decodificarJwt, getOidcConfig, oidcScopes, requireEnv } from './oidc';
+import { basePath, conBase, decodificarJwt, getOidcConfig, jwtVigente, oidcIdpHint, oidcScopes, requireEnv } from './oidc';
 
 declare module 'express-session' {
   interface SessionData {
@@ -57,6 +57,9 @@ authRouter.get('/auth/login', async (req, res, next) => {
       code_challenge_method: 'S256',
       state,
       nonce,
+      // Siempre pedir credenciales: no reusar en silencio una sesión vieja de Keycloak.
+      prompt: 'login',
+      ...(oidcIdpHint() ? { kc_idp_hint: oidcIdpHint()! } : {}),
     });
 
     res.redirect(authorizationUrl.href);
@@ -133,13 +136,48 @@ async function callback(req: Request, res: Response, next: NextFunction) {
 }
 authRouter.get(['/callback', '/login'], callback);
 
-// Inicia el logout: cierra la sesión local y termina la sesión en Keycloak.
+// Logout backchannel: POST directo a Keycloak con el refresh_token. Invalida la
+// sesión en el servidor de Keycloak aunque el id_token ya haya vencido.
+// Keycloak responde 204 si la cerró; cualquier otra cosa se registra y se sigue.
+async function logoutBackchannel(config: client.Configuration, refreshToken: string): Promise<void> {
+  const endpoint = config.serverMetadata().end_session_endpoint;
+  if (!endpoint) {
+    return;
+  }
+  try {
+    const respuesta = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: requireEnv('OIDC_CLIENT_ID'),
+        client_secret: requireEnv('OIDC_CLIENT_SECRET'),
+        refresh_token: refreshToken,
+      }),
+    });
+    if (respuesta.status !== 204) {
+      console.warn(`[Keycloak] logout backchannel respondió ${respuesta.status}: ${await respuesta.text()}`);
+    }
+  } catch (err) {
+    console.warn('[Keycloak] falló el logout backchannel:', (err as Error).message);
+  }
+}
+
+// Inicia el logout: cierra la sesión en Keycloak (backchannel), destruye la
+// sesión local y, si el id_token sigue vigente, pasa el navegador por el
+// end_session de Keycloak para borrar también su cookie (sin pantalla de
+// confirmación). Con el id_token vencido Keycloak pediría confirmar, así que
+// se vuelve directo al inicio: la sesión ya quedó cerrada por backchannel.
 authRouter.get('/auth/logout', async (req, res, next) => {
   try {
     const config = await getOidcConfig();
     const idToken = req.session.tokens?.idToken;
+    const refreshToken = req.session.tokens?.refreshToken;
 
-    const endSessionUrl = idToken
+    if (refreshToken) {
+      await logoutBackchannel(config, refreshToken);
+    }
+
+    const endSessionUrl = idToken && jwtVigente(idToken)
       ? client.buildEndSessionUrl(config, {
           id_token_hint: idToken,
           post_logout_redirect_uri: requireEnv('OIDC_POST_LOGOUT_REDIRECT_URI'),
