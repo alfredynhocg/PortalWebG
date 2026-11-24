@@ -105,6 +105,10 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   readonly urlVisorImagen = signal<string | null>(null);
   readonly urlVisorPdf = signal<SafeResourceUrl | null>(null);
   private blobVisorActual: string | null = null;
+  // Cédula y libreta se suben/reemplazan desde el paso 5 (antes solo se podía
+  // en la pantalla de postular, y si se saltaba no había cómo cargarlas).
+  readonly subiendoDocumento = signal<'cedula' | 'libreta' | null>(null);
+  readonly errorDocumento = signal<string | null>(null);
 
   readonly aceptarPara = aceptarPara;
   readonly formatoTamano = formatoTamano;
@@ -358,6 +362,45 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
         this.cargandoVisor.set(false);
         this.errorVisor.set('No se pudo cargar el documento. Puede estar dañado o no ser accesible.');
       },
+    });
+  }
+
+  esDocumentoSimple(tipo: string): tipo is 'cedula' | 'libreta' {
+    return tipo === 'cedula' || tipo === 'libreta';
+  }
+
+  // Sube (o reemplaza) la cédula o la libreta: el API la guarda directo en la
+  // postulación y borra la anterior. Luego se recarga el checklist.
+  subirDocumentoSimple(evento: Event, tipo: 'cedula' | 'libreta'): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    input.value = '';
+    if (!archivo || this.subiendoDocumento()) {
+      return;
+    }
+    this.errorDocumento.set(null);
+    const problema = validarArchivo(archivo, tipo);
+    if (problema) {
+      this.errorDocumento.set(problema);
+      return;
+    }
+    this.subiendoDocumento.set(tipo);
+    void verificarLectura(archivo).then((ilegible) => {
+      if (ilegible) {
+        this.subiendoDocumento.set(null);
+        this.errorDocumento.set(ilegible);
+        return;
+      }
+      this.postulacionesService.subirArchivo(this.postulacionId, tipo, archivo).subscribe({
+        next: () => {
+          this.subiendoDocumento.set(null);
+          this.cargarChecklist();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.subiendoDocumento.set(null);
+          this.errorDocumento.set(mensajeErrorArchivo(err));
+        },
+      });
     });
   }
 

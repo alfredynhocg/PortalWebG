@@ -697,7 +697,15 @@
                     @if (item.cargado) {
                       <button type="button" class="btn-ver-documento" (click)="verDocumentoChecklist(item)">Ver</button>
                     } @else {
-                      <span class="documentos-lista__sin-cargar">{{ item.obligatorio ? 'Falta cargar' : 'No aplica' }}</span>
+                      <span class="documentos-lista__sin-cargar">{{ item.obligatorio ? 'Falta cargar' : (esDocumentoSimple(item.tipo) ? 'Opcional' : 'No aplica') }}</span>
+                    }
+                    @if (c.editable && esDocumentoSimple(item.tipo)) {
+                      <label class="btn-subir-documento" [class.btn-subir-documento--ocupado]="subiendoDocumento() !== null"
+                        [title]="'PDF, máximo 3 MB'">
+                        {{ subiendoDocumento() === item.tipo ? 'Subiendo...' : (item.cargado ? 'Reemplazar' : 'Subir PDF') }}
+                        <input type="file" hidden [accept]="aceptarPara(item.tipo)" [disabled]="subiendoDocumento() !== null"
+                          (change)="subirDocumentoSimple($event, $any(item.tipo))" />
+                      </label>
                     }
                   </li>
                 }
@@ -717,6 +725,10 @@
                 }
               </div>
             </div>
+
+            @if (errorDocumento()) {
+              <p class="mensaje-error" role="alert">{{ errorDocumento() }}</p>
+            }
 
             @if (!c.completo) {
               <p class="mensaje-error" role="alert">
