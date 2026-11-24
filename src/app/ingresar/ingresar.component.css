@@ -1,0 +1,80 @@
+/* Base: ../postulaciones/postular.component.css (mismo look que el resto del portal). */
+
+.btn-volver {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.ingreso {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.ingreso form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.campo input:focus-visible,
+.clave__ver:focus-visible,
+.ingreso button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(203, 171, 88, 0.35);
+}
+
+.campo input.ng-touched.ng-invalid {
+  border-color: var(--bs-danger, #bf1b2d);
+}
+
+.clave {
+  display: flex;
+}
+
+.clave input {
+  flex: 1;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.clave__ver {
+  border: 1px solid #ccc;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background: #f4f4f2;
+  color: #4b4b49;
+  font-size: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.mensaje-error {
+  margin: 0;
+}
+
+.ingreso__enviar,
+.ingreso__cd {
+  width: 100%;
+}
+
+.ingreso__separador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 4px;
+  color: #888;
+  font-size: 12px;
+}
+
+.ingreso__separador::before,
+.ingreso__separador::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #eee;
+}
+
+.ingreso__cd:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

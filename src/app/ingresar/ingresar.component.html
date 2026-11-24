@@ -1,0 +1,61 @@
+<main class="contenido">
+  <a class="btn-volver" routerLink="/">← Volver a convocatorias</a>
+
+  <article class="wizard ingreso">
+    <h1>Iniciar sesión</h1>
+    <p class="wizard__paso">Ingresa con tu usuario y contraseña para postular a las convocatorias.</p>
+
+    <form #f="ngForm" (ngSubmit)="enviar(f)" novalidate>
+      <div class="campo">
+        <label for="usuario">Usuario o correo</label>
+        <input
+          id="usuario"
+          name="usuario"
+          type="text"
+          autocomplete="username"
+          required
+          [(ngModel)]="usuario"
+          [disabled]="enviando()"
+        />
+      </div>
+
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <div class="clave">
+          <input
+            id="clave"
+            name="clave"
+            [type]="verClave() ? 'text' : 'password'"
+            autocomplete="current-password"
+            required
+            [(ngModel)]="clave"
+            [disabled]="enviando()"
+          />
+          <button
+            type="button"
+            class="clave__ver"
+            (click)="verClave.set(!verClave())"
+            [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="verClave()"
+          >
+            {{ verClave() ? 'Ocultar' : 'Mostrar' }}
+          </button>
+        </div>
+      </div>
+
+      @if (error()) {
+        <p class="mensaje-error" role="alert">{{ error() }}</p>
+      }
+
+      <button type="submit" class="btn-primario ingreso__enviar" [disabled]="enviando()">
+        {{ enviando() ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+    </form>
+
+    <div class="ingreso__separador"><span>o ingresa con</span></div>
+
+    <button type="button" class="btn-secundario ingreso__cd" (click)="conCiudadania()" [disabled]="enviando()">
+      Ciudadanía Digital
+    </button>
+  </article>
+</main>

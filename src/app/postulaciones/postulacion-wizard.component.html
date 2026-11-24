@@ -35,12 +35,24 @@
         <section class="wizard__seccion-paso">
           <h2>Datos Personales</h2>
           <p class="wizard__nota">
-            Corregí tus datos si te equivocaste al registrarte. La foto de perfil, la cédula y la libreta militar se
-            manejan desde el paso 5 (Documentos).
+            Estos datos vienen de <a routerLink="/mi-perfil">Mi perfil</a> (incluida la fotografía) y se editan
+            solo ahí. Mientras no envíes la postulación, los cambios del perfil se reflejan aquí automáticamente;
+            al enviarla quedan fijos.
           </p>
 
-          <form #datosForm="ngForm" (ngSubmit)="guardarDatos(datosForm)" novalidate>
-            <fieldset class="wizard__seccion">
+          <div class="foto-perfil-wizard">
+            @if (fotoPerfil(); as foto) {
+              <img class="vista-foto" [src]="foto" alt="Tu fotografía de perfil" />
+            } @else if (fotoCargada()) {
+              <p class="adjunto adjunto--error" role="alert">
+                No tienes fotografía de perfil y es obligatoria para enviar la postulación.
+                Agrégala en <a routerLink="/mi-perfil">Mi perfil</a>.
+              </p>
+            }
+          </div>
+
+          <form #datosForm="ngForm" novalidate>
+            <fieldset class="wizard__seccion" disabled>
               <legend>Identificación</legend>
 
               <div class="campo">
@@ -151,7 +163,7 @@
               </div>
             </fieldset>
 
-            <fieldset class="wizard__seccion">
+            <fieldset class="wizard__seccion" disabled>
               <legend>Datos de Ubicación</legend>
 
               <div class="campo">
@@ -203,7 +215,7 @@
               </div>
             </fieldset>
 
-            <fieldset class="wizard__seccion">
+            <fieldset class="wizard__seccion" disabled>
               <legend>Datos Adicionales</legend>
 
               <div class="campo">
@@ -244,14 +256,8 @@
             @if (error()) {
               <p class="mensaje-error" role="alert">{{ error() }}</p>
             }
-            @if (datosGuardados()) {
-              <p class="adjunto adjunto--listo">✔ Datos actualizados.</p>
-            }
 
             <div class="wizard__acciones">
-              <button type="submit" class="btn-primario" [disabled]="guardandoDatos()">
-                {{ guardandoDatos() ? 'Guardando...' : 'Guardar cambios' }}
-              </button>
               <button type="button" class="btn-primario" (click)="irAPaso(2)">Siguiente</button>
             </div>
           </form>
@@ -262,11 +268,20 @@
         <section class="wizard__seccion-paso">
           <h2>Formación Académica</h2>
 
+          <div class="importar-barra">
+            <button type="button" class="btn-importar" (click)="abrirImportar('formaciones')">⤓ Traer de otra postulación</button>
+          </div>
+
           @if (r.formaciones.length) {
             <ul class="lista-bloques">
               @for (f of r.formaciones; track f.id; let i = $index) {
                 <li>
-                  {{ f.nivel_estudios }} — {{ f.institucion }} ({{ f.fecha_inicio }} a {{ f.fecha_fin }})
+                  <span>
+                    {{ f.nivel_estudios }} — {{ f.institucion }} ({{ f.fecha_inicio }} a {{ f.fecha_fin }})
+                    @if (f.por_revisar) {
+                      <em class="etiqueta-revisar" title="Importado de otra postulación: ábrelo con Editar, revísalo y guárdalo">Revisar para este cargo</em>
+                    }
+                  </span>
                   <span class="lista-bloques__acciones">
                     <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === 0"
                       (click)="moverFormacion(f.id, 'arriba')" title="Subir">↑</button>
@@ -410,11 +425,20 @@
         <section class="wizard__seccion-paso">
           <h2>Experiencia laboral</h2>
 
+          <div class="importar-barra">
+            <button type="button" class="btn-importar" (click)="abrirImportar('experiencias')">⤓ Traer de otra postulación</button>
+          </div>
+
           @if (r.experiencias.length) {
             <ul class="lista-bloques">
               @for (e of r.experiencias; track e.id; let i = $index) {
                 <li>
-                  {{ e.cargo }} — {{ e.institucion }} ({{ e.clasificacion }})
+                  <span>
+                    {{ e.cargo }} — {{ e.institucion }} ({{ e.clasificacion === 'GENERAL_ESPECIFICA' ? 'GENERAL - ESPECÍFICA' : e.clasificacion }})
+                    @if (e.por_revisar) {
+                      <em class="etiqueta-revisar" title="Importado de otra postulación: ábrelo con Editar, revisa la clasificación y guárdalo">Revisar para este cargo</em>
+                    }
+                  </span>
                   <span class="lista-bloques__acciones">
                     <button type="button" class="btn-mover-bloque" [disabled]="moviendoBloque() || i === 0"
                       (click)="moverExperiencia(e.id, 'arriba')" title="Subir">↑</button>
@@ -454,7 +478,11 @@
               <select id="clasificacion" name="clasificacion" required [(ngModel)]="nuevaExperiencia.clasificacion">
                 <option value="GENERAL">GENERAL</option>
                 <option value="ESPECIFICA">ESPECÍFICA</option>
+                <option value="GENERAL_ESPECIFICA">GENERAL - ESPECÍFICA</option>
               </select>
+              <small class="wizard__nota">
+                Elige "GENERAL - ESPECÍFICA" si esta experiencia cuenta para los dos requisitos: se registra una sola vez.
+              </small>
             </div>
 
             <div class="campo">
@@ -542,6 +570,10 @@
       @if (paso() === 4) {
         <section class="wizard__seccion-paso">
           <h2>Conocimientos y habilidades</h2>
+
+          <div class="importar-barra">
+            <button type="button" class="btn-importar" (click)="abrirImportar('conocimientos')">⤓ Traer de otra postulación</button>
+          </div>
 
           @if (r.conocimientos.length) {
             <ul class="lista-bloques">
@@ -733,6 +765,21 @@
             </div>
           </dl>
 
+          @if (porRevisar().length) {
+            <div class="aviso-revisar" role="alert">
+              <strong>Registros por revisar</strong>
+              <p>
+                Tienes {{ porRevisar().length }} registro(s) traído(s) de otra postulación. Ábrelos con <em>Editar</em>,
+                confirma que aplican a este cargo y guárdalos antes de enviar:
+              </p>
+              <ul>
+                @for (b of porRevisar(); track $index) {
+                  <li><button type="button" class="enlace" (click)="irAPaso(b.paso)">{{ b.texto }}</button></li>
+                }
+              </ul>
+            </div>
+          }
+
           <p class="wizard__nota">
             Se exige al menos 1 bloque de Formación Académica y al menos 1 de Experiencia Laboral (general o
             específica) antes de poder confirmar.
@@ -740,12 +787,17 @@
 
           <div class="wizard__acciones">
             <button type="button" class="btn-secundario" [disabled]="confirmando()" (click)="irAPaso(5)">Atrás</button>
-            <button type="button" class="btn-primario" [disabled]="confirmando()" (click)="confirmar()">
+            <button type="button" class="btn-primario" [disabled]="confirmando() || porRevisar().length > 0" (click)="confirmar()">
               {{ confirmando() ? 'Enviando...' : 'Confirmar y Enviar' }}
             </button>
           </div>
         </section>
       }
     </article>
+
+    @if (importarSeccion() !== undefined) {
+      <app-importar-postulacion [postulacionId]="postulacionId" [seccionInicial]="importarSeccion() ?? null"
+        (importado)="alImportar()" (cerrar)="cerrarImportar()" />
+    }
   }
 </main>

@@ -13,6 +13,9 @@ import {
   ExperienciaInput,
   Formacion,
   FormacionInput,
+  ImportablesResponse,
+  ImportarInput,
+  ImportarResponse,
   MiPostulacion,
   MisPostulacionesResponse,
   Postulacion,
@@ -226,6 +229,27 @@ export class PostulacionesService {
   quitar(postulacionId: string): Observable<QuitarPostulacionResponse> {
     return this.http.delete<QuitarPostulacionResponse>(
       `${BASE}/postulaciones/${postulacionId}`,
+      { headers: this.headers() }
+    );
+  }
+
+  // Reutilizar una postulación anterior: qué se puede traer al borrador
+  // `postulacionId` (solo postulaciones ENVIADAS del mismo postulante, cada
+  // bloque con `ya_en_postulacion`). ImportarPostulacion::importables().
+  importables(postulacionId: string): Observable<ImportablesResponse> {
+    return this.http.get<ImportablesResponse>(
+      `${BASE}/postulaciones/${postulacionId}/importables`,
+      { headers: this.headers() }
+    );
+  }
+
+  // Copia al borrador los bloques elegidos (con sus PDF), la cédula y la
+  // libreta. 409 = algo elegido ya estaba (no se importa nada); 500 con
+  // `reintentar` = no se guardó nada, se puede repetir. ImportarPostulacion::importar().
+  importar(postulacionId: string, datos: ImportarInput): Observable<ImportarResponse> {
+    return this.http.post<ImportarResponse>(
+      `${BASE}/postulaciones/${postulacionId}/importar`,
+      datos,
       { headers: this.headers() }
     );
   }

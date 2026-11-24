@@ -116,7 +116,7 @@ export interface FormacionInput {
   documento_url: string;
 }
 
-export interface Formacion extends FormacionInput {
+export interface Formacion extends FormacionInput, MarcaRevision {
   id: number;
   postulacion_id: string;
 }
@@ -127,7 +127,8 @@ export interface ExperienciaInput {
   institucion: string;
   cargo: string;
   tipo_institucion: 'PUBLICA' | 'PRIVADA';
-  clasificacion: 'GENERAL' | 'ESPECIFICA';
+  // GENERAL_ESPECIFICA: una sola experiencia que cuenta como general y como específica.
+  clasificacion: 'GENERAL' | 'ESPECIFICA' | 'GENERAL_ESPECIFICA';
   fecha_inicio: string;
   fecha_fin: string;
   modalidad_contrato: string;
@@ -136,7 +137,7 @@ export interface ExperienciaInput {
   documento_url: string;
 }
 
-export interface Experiencia extends ExperienciaInput {
+export interface Experiencia extends ExperienciaInput, MarcaRevision {
   id: number;
   postulacion_id: string;
 }
@@ -259,4 +260,100 @@ export interface MisPostulacionesResponse {
 export interface QuitarPostulacionResponse {
   data: null;
   success: { code: number; mensaje: string };
+}
+
+// ── Reutilizar una postulación anterior ────────────────────────────────────
+// GET .../postulaciones/{id}/importables y POST .../postulaciones/{id}/importar
+// (ImportarPostulacion del backend). El {id} es SIEMPRE el borrador destino.
+
+// Marca que devuelve resumen() en cada bloque importado de formación o
+// experiencia: hay que abrirlo y guardarlo antes de enviar (confirmar → 422).
+export interface MarcaRevision {
+  por_revisar?: boolean;
+}
+
+export type SeccionImportable = 'formaciones' | 'experiencias' | 'conocimientos';
+
+export interface BloqueImportable {
+  id: number;
+  titulo: string | null;
+  institucion: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  tiene_documento: boolean;
+  // Ya está en el borrador (se importó antes o coincide): no se puede elegir.
+  ya_en_postulacion: boolean;
+}
+
+export interface DocumentoImportable {
+  tiene_documento: boolean;
+  ya_en_postulacion: boolean;
+}
+
+// Solo postulaciones ENVIADAS del mismo postulante, de la última a la primera.
+export interface PostulacionImportable {
+  id: string;
+  codigo_convocatoria: string | null;
+  cargo: string | null;
+  estado: string;
+  codigo_postulacion: string | null;
+  fecha_registro: string | null;
+  fecha_envio: string | null;
+  cedula: DocumentoImportable;
+  libreta: DocumentoImportable;
+  formaciones: BloqueImportable[];
+  experiencias: BloqueImportable[];
+  conocimientos: BloqueImportable[];
+}
+
+export interface ImportablesResponse {
+  data: PostulacionImportable[];
+  success: { code: number; mensaje: string };
+}
+
+export interface ImportarInput {
+  origen: string;
+  formaciones?: number[];
+  experiencias?: number[];
+  conocimientos?: number[];
+  cedula?: boolean;
+  libreta?: boolean;
+}
+
+export interface BloqueImportado {
+  origen_id: number;
+  id: number;
+  por_revisar: boolean;
+}
+
+export type MotivoOmision = 'LIMITE' | 'NO_EXISTE' | 'VALIDACION' | 'SIN_DOCUMENTO_ORIGEN';
+
+export interface Omitido {
+  seccion: SeccionImportable | 'cedula' | 'libreta';
+  origen_id?: number;
+  motivo: MotivoOmision;
+  errores?: Record<string, string[]>;
+}
+
+export interface ImportarResponse {
+  data: {
+    origen: { id: string; codigo_convocatoria: string | null; codigo_postulacion: string | null };
+    importados: {
+      formaciones: BloqueImportado[];
+      experiencias: BloqueImportado[];
+      conocimientos: BloqueImportado[];
+      cedula: boolean;
+      libreta: boolean;
+    };
+    ya_estaban: { seccion: SeccionImportable; origen_id: number }[];
+    omitidos: Omitido[];
+    resumen: PostulacionResumen;
+  };
+  success: { code: number; mensaje: string };
+}
+
+// 409 de importar: lo elegido que ya estaba en la postulación.
+export interface DuplicadoImportacion {
+  seccion: SeccionImportable | 'cedula' | 'libreta';
+  origen_id?: number;
 }

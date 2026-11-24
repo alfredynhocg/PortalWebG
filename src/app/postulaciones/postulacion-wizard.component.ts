@@ -1,10 +1,13 @@
-import { Component, ElementRef, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable, map, of, switchMap } from 'rxjs';
+import { CuentaService, PerfilPortal } from '../core/cuenta.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PostulacionesService } from './postulaciones.service';
+import { ImportarPostulacionComponent } from './importar-postulacion.component';
 import { UUID_RE, mensajeError } from './errores';
 import { aceptarPara, formatoTamano, mensajeErrorArchivo, validarArchivo, verificarLectura } from './archivos';
 import {
@@ -20,6 +23,7 @@ import {
   FormacionInput,
   Postulacion,
   PostulacionResumen,
+  SeccionImportable,
   TipoArchivoBloque,
 } from './postulacion.model';
 
@@ -47,7 +51,7 @@ const ADJUNTO_VACIO: Adjunto = { estado: 'vacio' };
 @Component({
   selector: 'app-postulacion-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink, ImportarPostulacionComponent],
   templateUrl: './postulacion-wizard.component.html',
   styleUrl: './postulacion-wizard.component.css',
 })
@@ -55,6 +59,7 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly postulacionesService = inject(PostulacionesService);
+  private readonly cuenta = inject(CuentaService);
   private readonly sanitizer = inject(DomSanitizer);
 
   postulacionId = '';
@@ -75,6 +80,22 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   readonly resumen = signal<PostulacionResumen | null>(null);
   readonly confirmando = signal(false);
   readonly postulacionConfirmada = signal<Postulacion | null>(null);
+
+  // Reutilizar una postulación anterior (modal "Traer de otra postulación").
+  // `undefined` = cerrado; null = abierto sin sección preseleccionada.
+  readonly importarSeccion = signal<SeccionImportable | null | undefined>(undefined);
+  // Bloques importados de formación/experiencia que aún no se revisaron
+  // (abrir con Editar y guardar). Mientras haya alguno, confirmar() → 422.
+  readonly porRevisar = computed(() => {
+    const r = this.resumen();
+    if (!r) {
+      return [];
+    }
+    return [
+      ...r.formaciones.filter((f) => f.por_revisar).map((f) => ({ paso: 2 as Paso, texto: `Formación: ${f.nivel_estudios} — ${f.institucion}` })),
+      ...r.experiencias.filter((e) => e.por_revisar).map((e) => ({ paso: 3 as Paso, texto: `Experiencia: ${e.cargo} — ${e.institucion}` })),
+    ];
+  });
 
   // Paso 5 — Documentos (pág. 54-55).
   readonly checklist = signal<ChecklistDocumentos | null>(null);
@@ -100,11 +121,13 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   nuevaExperiencia: ExperienciaInput = this.experienciaVacia();
   nuevoConocimiento: ConocimientoInput = this.conocimientoVacio();
 
-  // Paso 1 — editar datos personales de una postulación ya creada (pág. 12:
-  // "Permitir registrar/actualizar datos personales"). Se prellena con lo que
-  // ya devuelve resumen() al entrar; foto/cédula/libreta se manejan aparte, en
-  // el paso 5, no acá, para no duplicar la lógica de subida de archivos.
-  readonly guardandoDatos = signal(false);
+  // Paso 1 — datos personales de la postulación, de solo lectura (se muestran
+  // los de resumen()). Se editan en Mi perfil y se copian solos mientras la
+  // postulación está en ELABORADO (sincronizarConPerfil). La foto es de la
+  // cuenta; cédula/libreta, paso 5.
+  // Foto de la cuenta (data: URI), la misma para todas las postulaciones.
+  readonly fotoPerfil = signal<string | null>(null);
+  readonly fotoCargada = signal(false);
   datosPersonales: DatosPersonalesPostulante = this.datosPersonalesVacios();
 
   readonly departamentos = [
@@ -172,6 +195,13 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
     this.postulacionId = id;
     this.codigo = codigo;
     this.cargarResumen();
+    this.cuenta.fotoPerfil().subscribe({
+      next: (foto) => {
+        this.fotoPerfil.set(foto.tiene_foto ? foto.contenido : null);
+        this.fotoCargada.set(true);
+      },
+      error: () => this.fotoCargada.set(true),
+    });
   }
 
   // `mostrarCarga = false` refresca el resumen sin reemplazar la pantalla por
@@ -215,6 +245,14 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
         // que el postulante llene el wizard y recién se entere al confirmar.
         if (respuesta.data.estado !== 'ELABORADO') {
           this.postulacionConfirmada.set(respuesta.data);
+        } else if (!this.sincronizadaConPerfil) {
+          // Borrador: los datos personales se toman siempre de Mi perfil.
+          this.sincronizadaConPerfil = true;
+          this.sincronizarConPerfil().subscribe({
+            next: (cambio) => cambio && this.cargarResumen(false),
+            error: (err: HttpErrorResponse) =>
+              this.error.set(mensajeError(err, 'No se pudieron traer tus datos de Mi perfil.')),
+          });
         }
         this.cargando.set(false);
       },
@@ -234,7 +272,6 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   irAPaso(paso: Paso): void {
     this.paso.set(paso);
     this.error.set(null);
-    this.datosGuardados.set(false);
     if (paso === 5) {
       this.cargarChecklist();
     } else {
@@ -242,28 +279,33 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
     }
   }
 
-  readonly datosGuardados = signal(false);
+  private sincronizadaConPerfil = false;
 
-  guardarDatos(formulario: NgForm): void {
-    if (formulario.invalid) {
-      formulario.form.markAllAsTouched();
-      this.error.set(this.MENSAJE_CAMPOS_OBLIGATORIOS);
-      return;
-    }
-    this.error.set(null);
-    this.datosGuardados.set(false);
-    this.guardandoDatos.set(true);
-    this.postulacionesService.actualizarDatos(this.postulacionId, this.datosPersonales).subscribe({
-      next: (respuesta) => {
-        this.resumen.set(respuesta.data);
-        this.guardandoDatos.set(false);
-        this.datosGuardados.set(true);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.guardandoDatos.set(false);
-        this.error.set(mensajeError(err, 'No se pudieron guardar los datos personales.'));
-      },
-    });
+  // Mi perfil es la única fuente de los datos personales: mientras la
+  // postulación está en ELABORADO se copian a ella si difieren (al abrir el
+  // wizard y antes de confirmar). Al enviarla quedan fijos. El backend vuelve
+  // a imponer los de Ciudadanía Digital y valida todo. true = hubo cambios.
+  private sincronizarConPerfil(): Observable<boolean> {
+    return this.cuenta.perfil().pipe(
+      switchMap(({ data }) => {
+        const actuales = this.datosPersonales as unknown as Record<string, string>;
+        const datos: Record<string, string> = {};
+        for (const campo of Object.keys(actuales)) {
+          const valor = data.perfil[campo as keyof PerfilPortal];
+          datos[campo] = typeof valor === 'string' ? valor : '';
+        }
+        datos['ci'] = data.ci;
+        datos['complemento'] = data.complemento ?? '';
+
+        const difiere = Object.keys(datos).some((c) => (datos[c] ?? '') !== (actuales[c] ?? ''));
+        if (!difiere) {
+          return of(false);
+        }
+        return this.postulacionesService
+          .actualizarDatos(this.postulacionId, datos as unknown as DatosPersonalesPostulante)
+          .pipe(map(() => true));
+      }),
+    );
   }
 
   private cargarChecklist(): void {
@@ -704,7 +746,10 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
   confirmar(): void {
     this.confirmando.set(true);
     this.error.set(null);
-    this.postulacionesService.confirmar(this.postulacionId).subscribe({
+    // Último sync con Mi perfil antes de enviar: lo enviado es lo que tiene el perfil ahora.
+    this.sincronizarConPerfil()
+      .pipe(switchMap(() => this.postulacionesService.confirmar(this.postulacionId)))
+      .subscribe({
       next: (respuesta) => {
         this.confirmando.set(false);
         this.postulacionConfirmada.set(respuesta.data);
@@ -714,6 +759,21 @@ export class PostulacionWizardComponent implements OnInit, OnDestroy {
         this.error.set(mensajeError(err, 'No se pudo confirmar la postulación.'));
       },
     });
+  }
+
+  abrirImportar(seccion: SeccionImportable | null): void {
+    this.error.set(null);
+    this.importarSeccion.set(seccion);
+  }
+
+  cerrarImportar(): void {
+    this.importarSeccion.set(undefined);
+  }
+
+  // Tras importar se recarga el resumen completo (sin "Cargando..."), igual
+  // que después de agregar un bloque.
+  alImportar(): void {
+    this.cargarResumen(false);
   }
 
   volver(): void {

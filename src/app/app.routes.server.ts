@@ -2,6 +2,7 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 
 export const serverRoutes: ServerRoute[] = [
   // Dependen de la sesión del usuario (cookie): no se pueden prerenderizar.
+  { path: 'ingresar', renderMode: RenderMode.Client },
   { path: 'registro', renderMode: RenderMode.Client },
   { path: 'mi-perfil', renderMode: RenderMode.Client },
   { path: 'convocatorias/postular', renderMode: RenderMode.Client },

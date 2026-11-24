@@ -1,13 +1,12 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
+import express, { Router, type Request, type Response, type NextFunction } from 'express';
 import * as client from 'openid-client';
 import { basePath, conBase, decodificarJwt, getOidcConfig, jwtVigente, oidcIdpHint, oidcScopes, requireEnv } from './oidc';
+import { obtenerAccessToken } from './token';
 
 declare module 'express-session' {
   interface SessionData {
     oidcTxn?: {
       state: string;
-      nonce: string;
-      codeVerifier: string;
       returnTo: string;
     };
     user?: Record<string, unknown>;
@@ -39,26 +38,28 @@ function returnToSeguro(valor: unknown): string {
   return valor;
 }
 
+// Rutas equivalentes al ejemplo de referencia (~/Downloads/ciudadania/server.js):
+//   /login           → redirige a Keycloak (y con kc_idp_hint, directo a Ciudadanía)
+//   /callback        → intercambia el code por los tokens
+//   /userinfo        → GET directo al userinfo de Keycloak (refresca el token si hace falta)
+//   /logout          → logout backchannel (POST directo a Keycloak con el refresh_token)
+//   /logout-browser  → logout por navegador (end_session de Keycloak)
+// /auth/login y /auth/logout son los que usa el frontend (AuthService).
+
 // Inicia el login: redirige a Keycloak, que ofrece Ciudadanía Digital.
-authRouter.get('/auth/login', async (req, res, next) => {
+authRouter.get(['/login', '/auth/login'], async (req, res, next) => {
   try {
     const config = await getOidcConfig();
-    const codeVerifier = client.randomPKCECodeVerifier();
-    const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
+    // state: protege el callback contra CSRF (Keycloak lo devuelve tal cual).
     const state = client.randomState();
-    const nonce = client.randomNonce();
 
-    req.session.oidcTxn = { state, nonce, codeVerifier, returnTo: returnToSeguro(req.query['returnTo']) };
+    req.session.oidcTxn = { state, returnTo: returnToSeguro(req.query['returnTo']) };
 
+    // URL mínima: client_id, redirect_uri, response_type=code, scope (+ state).
     const authorizationUrl = client.buildAuthorizationUrl(config, {
       redirect_uri: requireEnv('OIDC_REDIRECT_URI'),
       scope: oidcScopes(),
-      code_challenge: codeChallenge,
-      code_challenge_method: 'S256',
       state,
-      nonce,
-      // Siempre pedir credenciales: no reusar en silencio una sesión vieja de Keycloak.
-      prompt: 'login',
       ...(oidcIdpHint() ? { kc_idp_hint: oidcIdpHint()! } : {}),
     });
 
@@ -96,9 +97,7 @@ async function callback(req: Request, res: Response, next: NextFunction) {
     const currentUrl = new URL(req.originalUrl, requireEnv('OIDC_REDIRECT_URI'));
 
     const tokens = await client.authorizationCodeGrant(config, currentUrl, {
-      pkceCodeVerifier: txn.codeVerifier,
       expectedState: txn.state,
-      expectedNonce: txn.nonce,
     });
 
     // TEMPORAL (paso 1 de la guía): ver qué claims trae el access_token para
@@ -134,7 +133,73 @@ async function callback(req: Request, res: Response, next: NextFunction) {
     next(err);
   }
 }
-authRouter.get(['/callback', '/login'], callback);
+authRouter.get('/callback', callback);
+
+// Login con usuario y contraseña (grant_type=password), sin salir del portal:
+// el mismo POST a /token que se prueba en Postman, pero hecho desde el
+// servidor para que el client_secret nunca llegue al navegador.
+// Body: { username, password, returnTo? } → { redirectTo } (ruta de la app).
+authRouter.post('/auth/password', express.json({ limit: '10kb' }), async (req, res, next) => {
+  try {
+    const { username, password } = req.body ?? {};
+    if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
+      res.status(400).json({ error: { message: 'Ingresa tu usuario y contraseña.', code: 400 } });
+      return;
+    }
+
+    const config = await getOidcConfig();
+    const respuesta = await fetch(config.serverMetadata().token_endpoint!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        client_id: requireEnv('OIDC_CLIENT_ID'),
+        client_secret: requireEnv('OIDC_CLIENT_SECRET'),
+        username: username.trim(),
+        password,
+        scope: oidcScopes(),
+      }),
+    });
+    const datos = await respuesta.json().catch(() => ({}));
+
+    if (!respuesta.ok || !datos.access_token) {
+      // invalid_grant = usuario o contraseña incorrectos (o cuenta deshabilitada).
+      const credencialesInvalidas = datos.error === 'invalid_grant';
+      console.warn(`[Keycloak] login con contraseña respondió ${respuesta.status}: ${datos.error ?? ''} ${datos.error_description ?? ''}`);
+      res.status(credencialesInvalidas ? 401 : 502).json({
+        error: {
+          message: credencialesInvalidas ? 'Usuario o contraseña incorrectos.' : 'No se pudo iniciar sesión. Intenta nuevamente.',
+          code: credencialesInvalidas ? 401 : 502,
+        },
+      });
+      return;
+    }
+
+    // Mismo registro en Laravel que el callback: si lo rechaza, no hay sesión a medias.
+    const backend = await registrarEnBackend(datos.access_token);
+    const returnTo = returnToSeguro(req.body?.returnTo);
+
+    // Sesión nueva tras autenticarse (evita fijación de sesión).
+    req.session.regenerate((err) => {
+      if (err) {
+        next(err);
+        return;
+      }
+      req.session.user = decodificarJwt(datos.id_token ?? datos.access_token);
+      req.session.tokens = {
+        accessToken: datos.access_token,
+        refreshToken: datos.refresh_token,
+        idToken: datos.id_token,
+        expiresAt: Date.now() + (datos.expires_in ?? 300) * 1000,
+      };
+      req.session.backend = backend;
+      res.json({ redirectTo: backend['registro_completo'] !== true ? '/registro' : returnTo });
+    });
+  } catch (err) {
+    console.error('[Keycloak] error en login con contraseña:', err);
+    res.status(502).json({ error: { message: 'No se pudo iniciar sesión. Intenta nuevamente.', code: 502 } });
+  }
+});
 
 // Logout backchannel: POST directo a Keycloak con el refresh_token. Invalida la
 // sesión en el servidor de Keycloak aunque el id_token ya haya vencido.
@@ -196,9 +261,62 @@ authRouter.get('/auth/logout', async (req, res, next) => {
   }
 });
 
-// Callback configurado como "URL de redirección al cerrar sesión" en el proveedor.
-authRouter.get('/logout', (_req, res) => {
-  res.redirect(conBase('/'));
+// Logout BACKCHANNEL (como /logout del ejemplo): cierra la sesión en el servidor
+// de Keycloak y la local. No borra la cookie de Keycloak en el navegador.
+authRouter.get('/logout', async (req, res, next) => {
+  try {
+    const refreshToken = req.session.tokens?.refreshToken;
+    if (refreshToken) {
+      await logoutBackchannel(await getOidcConfig(), refreshToken);
+    }
+    req.session.destroy((err) => (err ? next(err) : res.redirect(conBase('/'))));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Logout por NAVEGADOR (como /logout-browser del ejemplo): pasa por el
+// end_session de Keycloak, que sí borra su cookie. Con el id_token vigente va
+// id_token_hint (sin confirmación); si no, client_id.
+authRouter.get('/logout-browser', async (req, res, next) => {
+  try {
+    const config = await getOidcConfig();
+    const idToken = req.session.tokens?.idToken;
+    const parametros: Record<string, string> = {
+      post_logout_redirect_uri: requireEnv('OIDC_POST_LOGOUT_REDIRECT_URI'),
+    };
+    if (idToken && jwtVigente(idToken)) {
+      parametros['id_token_hint'] = idToken;
+    } else {
+      parametros['client_id'] = requireEnv('OIDC_CLIENT_ID');
+    }
+    const url = client.buildEndSessionUrl(config, parametros).href;
+    req.session.destroy((err) => (err ? next(err) : res.redirect(url)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// UserInfo (como /userinfo del ejemplo): GET directo a Keycloak con el
+// access_token de la sesión, renovado antes si está por expirar.
+authRouter.get('/userinfo', async (req, res, next) => {
+  try {
+    const accessToken = await obtenerAccessToken(req);
+    if (!accessToken) {
+      res.status(401).json({ error: { message: 'No hay sesión. Inicia sesión primero.', code: 401 } });
+      return;
+    }
+    const endpoint = (await getOidcConfig()).serverMetadata().userinfo_endpoint;
+    const respuesta = await fetch(endpoint!, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const datos = await respuesta.json().catch(() => ({}));
+    res.status(respuesta.status).json({
+      status: respuesta.status,
+      message: respuesta.ok ? 'UserInfo obtenido' : 'Fallo al obtener userinfo',
+      response: datos,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // SOLO DESARROLLO: muestra lo que llegó de Keycloak en el último login (claims

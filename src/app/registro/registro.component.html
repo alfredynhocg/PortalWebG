@@ -163,6 +163,40 @@
           </div>
         </fieldset>
 
+        <fieldset class="wizard__seccion">
+          <legend>Fotografía de perfil</legend>
+          <p class="wizard__nota campo--ancho">
+            Se usa en todas tus postulaciones (obligatoria para enviarlas). Imagen JPG o PNG, máximo 2 MB.
+          </p>
+
+          <div class="campo campo--ancho">
+            @if (vistaFotoNueva(); as vista) {
+              <img class="vista-foto" [src]="vista" alt="Vista previa de la nueva fotografía" />
+              <p class="wizard__nota">Nueva fotografía: se guarda al presionar "{{ primeraVez() ? 'Completar registro' : 'Guardar cambios' }}".</p>
+            } @else if (fotoActual(); as foto) {
+              <img class="vista-foto" [src]="foto" alt="Tu fotografía de perfil" />
+            } @else {
+              <p class="wizard__nota">Todavía no tienes una fotografía de perfil.</p>
+            }
+
+            <label for="foto_perfil">{{ fotoActual() ? 'Cambiar fotografía' : 'Agregar fotografía' }}</label>
+            <input
+              #entradaFoto
+              id="foto_perfil"
+              type="file"
+              [accept]="aceptarFoto"
+              [disabled]="enviando()"
+              (change)="seleccionarFoto($event)"
+            />
+            @if (fotoNueva()) {
+              <button type="button" class="btn-enlace" (click)="quitarFotoNueva(entradaFoto)">Quitar la nueva</button>
+            }
+            @if (errorFoto()) {
+              <p class="adjunto adjunto--error" role="alert">{{ errorFoto() }}</p>
+            }
+          </div>
+        </fieldset>
+
         @if (error()) {
           <p class="mensaje-error" role="alert">{{ error() }}</p>
         }

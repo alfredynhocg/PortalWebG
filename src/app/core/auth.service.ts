@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 // Claims del id_token que manda Keycloak cuando el login viene de Ciudadanía Digital.
@@ -40,6 +41,7 @@ function urlDelPortal(ruta: string): string {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly router = inject(Router);
 
   readonly session = signal<AuthSession>({ authenticated: false });
   readonly loaded = signal(false);
@@ -81,11 +83,34 @@ export class AuthService {
     }
   }
 
+  // Lleva a la pantalla de ingreso del portal (/ingresar), que vuelve a
+  // returnTo después de iniciar sesión.
   login(returnTo?: string): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
-    const destino = encodeURIComponent(returnTo ?? window.location.pathname + window.location.search);
+    const destino = returnTo ?? this.router.url;
+    this.router.navigate(['/ingresar'], {
+      queryParams: destino && destino !== '/' && !destino.startsWith('/ingresar') ? { returnTo: destino } : {},
+    });
+  }
+
+  // Usuario y contraseña de Keycloak (grant password). El POST a /token lo
+  // hace el servidor del portal; devuelve la ruta a la que hay que ir después.
+  async ingresarConClave(username: string, password: string, returnTo?: string): Promise<string> {
+    const { redirectTo } = await firstValueFrom(
+      this.http.post<{ redirectTo: string }>('auth/password', { username, password, returnTo }),
+    );
+    await this.recargar();
+    return redirectTo;
+  }
+
+  // Alternativa: login por redirección (Keycloak → Ciudadanía Digital).
+  loginConCiudadania(returnTo?: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    const destino = encodeURIComponent(returnTo ?? '/');
     window.location.href = urlDelPortal(`auth/login?returnTo=${destino}`);
   }
 

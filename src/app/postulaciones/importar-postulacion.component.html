@@ -1,0 +1,134 @@
+<div class="importar__fondo" (click)="cancelar()"></div>
+<div class="importar" role="dialog" aria-modal="true" aria-labelledby="importar-titulo">
+  <header class="importar__cabecera">
+    <h2 id="importar-titulo">Traer de otra postulación</h2>
+    <button type="button" class="importar__cerrar" [disabled]="enviando()" (click)="cancelar()" aria-label="Cerrar">×</button>
+  </header>
+
+  <div class="importar__cuerpo">
+    @if (resultado(); as r) {
+      <!-- Resultado -->
+      <p class="importar__ok">✔ {{ r.success.mensaje }}</p>
+      @if (totalPorRevisar(r) > 0) {
+        <p class="importar__aviso">
+          Los registros de formación y experiencia traídos quedaron marcados <strong>"Revisar para este cargo"</strong>.
+          Ábrelos, confirma que aplican a esta convocatoria y guárdalos: no podrás enviar hasta revisarlos.
+        </p>
+      }
+      @if (r.data.omitidos.length) {
+        <p class="importar__subtitulo">No se trajeron:</p>
+        <ul class="importar__omitidos">
+          @for (o of r.data.omitidos; track $index) {
+            <li>
+              <strong>{{ nombreOmitido(o.seccion, o.origen_id) }}</strong>: {{ textoMotivo(o.motivo) }}.
+            </li>
+          }
+        </ul>
+      }
+    } @else if (cargando()) {
+      <p class="importar__nota">Cargando tus postulaciones enviadas...</p>
+    } @else if (!origenes().length) {
+      <p class="importar__nota">
+        No tienes postulaciones enviadas de las que traer datos. Solo se pueden reutilizar postulaciones que ya enviaste.
+      </p>
+    } @else {
+      <!-- Selección -->
+      <label class="importar__origen">
+        <span>Postulación de origen</span>
+        <select [value]="origenId() ?? ''" (change)="elegirOrigen($any($event.target).value)" [disabled]="enviando()">
+          @for (o of origenes(); track o.id) {
+            <option [value]="o.id">
+              {{ o.codigo_postulacion ?? o.codigo_convocatoria }} — {{ o.cargo ?? 'Sin cargo' }}
+              ({{ o.fecha_envio | date: 'dd/MM/yyyy' }})
+            </option>
+          }
+        </select>
+      </label>
+      <p class="importar__nota">
+        Se copian los datos y sus documentos. Tu postulación original no cambia. Lo que ya está en esta postulación
+        aparece deshabilitado.
+      </p>
+
+      @if (origen(); as o) {
+        @for (s of secciones; track s.clave) {
+          <fieldset class="importar__seccion">
+            <legend>
+              <label>
+                <input type="checkbox" [checked]="todosMarcados(s.clave)" [disabled]="!disponibles(s.clave).length || enviando()"
+                  (change)="alternarSeccion(s.clave)" />
+                {{ s.titulo }} ({{ o[s.clave].length }})
+              </label>
+            </legend>
+            @if (s.ayuda && o[s.clave].length) {
+              <p class="importar__ayuda">{{ s.ayuda }}</p>
+            }
+            @if (!o[s.clave].length) {
+              <p class="importar__vacio">Sin registros en esa postulación.</p>
+            }
+            @for (b of o[s.clave]; track b.id) {
+              <label class="importar__item" [class.importar__item--bloqueado]="!disponible(b)">
+                <input type="checkbox" [checked]="estaMarcado(s.clave, b.id)" [disabled]="!disponible(b) || enviando()"
+                  (change)="alternar(s.clave, b.id)" />
+                <span>
+                  {{ b.titulo }}@if (b.institucion) { — {{ b.institucion }}}
+                  @if (b.fecha_inicio) {
+                    <small>({{ b.fecha_inicio }}{{ b.fecha_fin ? ' a ' + b.fecha_fin : '' }})</small>
+                  }
+                </span>
+                @if (motivoNoDisponible(b); as motivo) {
+                  <em class="importar__etiqueta">{{ motivo }}</em>
+                }
+              </label>
+            }
+          </fieldset>
+        }
+
+        <fieldset class="importar__seccion">
+          <legend>Documentos</legend>
+          <label class="importar__item" [class.importar__item--bloqueado]="!documentoDisponible('cedula', o)">
+            <input type="checkbox" [checked]="cedula()" [disabled]="!documentoDisponible('cedula', o) || enviando()"
+              (change)="cedula.set(!cedula())" />
+            <span>Cédula de identidad</span>
+            @if (o.cedula.ya_en_postulacion) {
+              <em class="importar__etiqueta">Ya está en esta postulación</em>
+            } @else if (!o.cedula.tiene_documento) {
+              <em class="importar__etiqueta">No tiene documento</em>
+            }
+          </label>
+          <label class="importar__item" [class.importar__item--bloqueado]="!documentoDisponible('libreta', o)">
+            <input type="checkbox" [checked]="libreta()" [disabled]="!documentoDisponible('libreta', o) || enviando()"
+              (change)="libreta.set(!libreta())" />
+            <span>Libreta militar</span>
+            @if (o.libreta.ya_en_postulacion) {
+              <em class="importar__etiqueta">Ya está en esta postulación</em>
+            } @else if (!o.libreta.tiene_documento) {
+              <em class="importar__etiqueta">No tiene documento</em>
+            }
+          </label>
+        </fieldset>
+      }
+    }
+
+    @if (error()) {
+      <p class="importar__error" role="alert">{{ error() }}</p>
+    }
+  </div>
+
+  <footer class="importar__pie">
+    @if (resultado()) {
+      <button type="button" class="btn-primario" (click)="terminar()">Listo</button>
+    } @else {
+      <button type="button" class="btn-secundario" [disabled]="enviando()" (click)="cancelar()">Cancelar</button>
+      @if (puedeReintentar()) {
+        <button type="button" class="btn-primario" [disabled]="enviando()" (click)="importar()">
+          {{ enviando() ? 'Reintentando...' : 'Reintentar' }}
+        </button>
+      } @else if (origenes().length) {
+        <button type="button" class="btn-primario" [disabled]="enviando() || cargando() || totalSeleccionado() === 0"
+          (click)="importar()">
+          {{ enviando() ? 'Trayendo...' : 'Traer ' + totalSeleccionado() + ' seleccionado(s)' }}
+        </button>
+      }
+    }
+  </footer>
+</div>

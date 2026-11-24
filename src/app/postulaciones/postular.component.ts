@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../core/auth.service';
@@ -23,12 +23,14 @@ interface DocumentoPostulante {
 
 const DOCUMENTO_VACIO: DocumentoPostulante = { archivo: null, estado: 'vacio' };
 
-// Paso 1 de 6 del wizard de postulación (Datos personales + documentos: foto,
-// cédula y libreta militar). Los pasos 2-6 viven en PostulacionWizardComponent.
+// Paso 1 de 6 del wizard de postulación: muestra los datos personales y la
+// fotografía del perfil (solo lectura; se editan en Mi perfil), crea la
+// postulación con ellos y sube cédula y libreta militar. Los pasos 2-6 viven
+// en PostulacionWizardComponent.
 @Component({
   selector: 'app-postular',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './postular.component.html',
   styleUrl: './postular.component.css',
 })
@@ -53,13 +55,15 @@ export class PostularComponent implements OnInit, OnDestroy {
   // subida de algún documento falla, "Reintentar" reutiliza esta postulación en
   // vez de volver a crearla (que respondería 409).
   readonly postulacionCreadaId = signal<string | null>(null);
+  // Foto de la cuenta (data: URI). Se cambia solo en Mi perfil.
+  readonly fotoPerfil = signal<string | null>(null);
 
   readonly aceptarPara = aceptarPara;
   readonly formatoTamano = formatoTamano;
   // Límites y formatos de cada uno viven en archivos.ts (LIMITES_ARCHIVO), por
-  // tipo: foto ≤2MB JPG/PNG; cédula y libreta solo PDF ≤3MB (pág. 43-46).
+  // tipo: cédula y libreta solo PDF ≤3MB (pág. 43-46). La fotografía no va
+  // aquí: es de la cuenta y se cambia en Mi perfil.
   readonly documentosConfig: { tipo: TipoArchivoSimple; etiqueta: string }[] = [
-    { tipo: 'foto_perfil', etiqueta: 'Fotografía de perfil' },
     { tipo: 'cedula', etiqueta: 'Cédula de identidad' },
     { tipo: 'libreta', etiqueta: 'Libreta militar' },
   ];
@@ -150,6 +154,10 @@ export class PostularComponent implements OnInit, OnDestroy {
         this.datos.complemento = data.complemento ?? '';
         this.bloqueados.set(new Set(['ci', 'complemento', ...(data.campos_bloqueados ?? [])]));
         this.cargandoPerfil.set(false);
+        this.cuenta.fotoPerfil().subscribe({
+          next: (foto) => this.fotoPerfil.set(foto.tiene_foto ? foto.contenido : null),
+          error: () => this.fotoPerfil.set(null),
+        });
       },
       error: (err: HttpErrorResponse) => {
         this.cargandoPerfil.set(false);

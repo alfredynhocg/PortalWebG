@@ -8,11 +8,14 @@
       @if (cargandoPerfil()) {
         <p class="wizard__paso">Cargando tus datos...</p>
       } @else {
-        <p class="nota-bloqueados">🔒 Tus datos se completaron desde tu perfil. Los campos con candado vienen de <strong>Ciudadanía Digital</strong> y no se pueden modificar.</p>
+        <p class="nota-bloqueados">
+          🔒 Estos datos vienen de tu perfil y aquí no se pueden modificar. Si algo está mal, corrígelo en
+          <a routerLink="/mi-perfil">Mi perfil</a> y vuelve a esta convocatoria.
+        </p>
       }
 
       <form #f="ngForm" (ngSubmit)="enviar(f)" novalidate>
-        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
+        <fieldset class="wizard__seccion" disabled>
           <legend>Datos Personales</legend>
 
           <div class="campo">
@@ -123,7 +126,7 @@
           </div>
         </fieldset>
 
-        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
+        <fieldset class="wizard__seccion" disabled>
           <legend>Datos de Ubicación</legend>
 
           <div class="campo">
@@ -175,7 +178,7 @@
           </div>
         </fieldset>
 
-        <fieldset class="wizard__seccion" [disabled]="postulacionCreadaId() !== null">
+        <fieldset class="wizard__seccion" disabled>
           <legend>Datos Adicionales</legend>
 
           <div class="campo">
@@ -214,9 +217,23 @@
         </fieldset>
 
         <fieldset class="wizard__seccion">
+          <legend>Fotografía de perfil</legend>
+          <div class="campo campo--ancho">
+            @if (fotoPerfil(); as foto) {
+              <img class="vista-foto" [src]="foto" alt="Tu fotografía de perfil" />
+            } @else if (!cargandoPerfil()) {
+              <p class="adjunto adjunto--error" role="alert">
+                Todavía no tienes una fotografía de perfil y es obligatoria para enviar la postulación.
+                Agrégala en <a routerLink="/mi-perfil">Mi perfil</a>.
+              </p>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="wizard__seccion">
           <legend>Documentos (opcionales)</legend>
           <p class="wizard__nota">
-            Fotografía de perfil: imagen JPG o PNG, máximo 2 MB. Cédula y libreta militar: solo PDF, máximo 3 MB.
+            Cédula de identidad y libreta militar: solo PDF, máximo 3 MB.
           </p>
 
           @for (d of documentosConfig; track d.tipo) {
@@ -231,10 +248,6 @@
                 [disabled]="enviando() || doc.estado === 'listo'"
                 (change)="seleccionarDocumento($event, d.tipo)"
               />
-
-              @if (doc.vista) {
-                <img class="vista-foto" [src]="doc.vista" alt="Vista previa de la fotografía" />
-              }
 
               @switch (doc.estado) {
                 @case ('pendiente') {
